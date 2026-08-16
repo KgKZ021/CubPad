@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNoteZustandStore } from '../stores/useNoteZustandStore';
-import { Type, Clock, Edit3, Check, StickyNote as StickyIcon, Menu, FileText } from 'lucide-react';
+import { Clock, Edit3, Check, Menu, FileText, Code } from 'lucide-react';
+import { CubEditor } from './Editor/CubEditor';
 
 export const CanvasArea: React.FC = () => {
   const {
     getActiveNote,
     updateNoteContent,
     updateNoteTitle,
-    fontMode,
-    toggleFontMode,
     toggleSidebar,
     addNote,
   } = useNoteZustandStore();
@@ -66,28 +65,15 @@ export const CanvasArea: React.FC = () => {
     setIsEditingTitle(false);
   };
 
-  const handleContentBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    updateNoteContent(activeNote.id, e.currentTarget.innerHTML);
-  };
-
   const handleRawContentSave = () => {
     updateNoteContent(activeNote.id, rawContent);
     setIsRawEditing(false);
   };
 
-  const paperClass =
-    activeNote.backgroundStyle === 'grid'
-      ? 'paper-grid'
-      : activeNote.backgroundStyle === 'dot'
-      ? 'paper-dot'
-      : activeNote.backgroundStyle === 'blank'
-      ? 'paper-blank'
-      : 'paper-lined';
-
   return (
     <main className="flex-1 h-full bg-theme-primary flex flex-col overflow-hidden min-w-0">
       {/* Top Desk Toolbar Header */}
-      <header className="h-16 flex-shrink-0 px-3 sm:px-6 bg-white/80 backdrop-blur border-b border-theme-border flex items-center justify-between gap-2 sm:gap-4 select-none shadow-xs z-10">
+      <header className="h-14 flex-shrink-0 px-3 sm:px-6 bg-white/90 backdrop-blur border-b border-theme-border flex items-center justify-between gap-2 sm:gap-4 select-none shadow-xs z-10">
         {/* Left: Mobile Toggle & Note Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {/* Mobile Hamburger Menu */}
@@ -134,9 +120,9 @@ export const CanvasArea: React.FC = () => {
           </span>
         </div>
 
-        {/* Right: Action Controls & Font Toggle */}
+        {/* Right: Timestamp & Raw HTML Toggle */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
-          {/* Last Updated Timestamp (Desktop only) */}
+          {/* Last Updated Timestamp */}
           <div className="hidden xl:flex items-center gap-1.5 text-xs text-[#8E8276]">
             <Clock size={13} />
             <span>
@@ -147,7 +133,7 @@ export const CanvasArea: React.FC = () => {
             </span>
           </div>
 
-          <div className="h-5 w-[1px] bg-theme-border hidden xl:block" />
+          <div className="h-4 w-[1px] bg-theme-border hidden xl:block" />
 
           {/* Quick Edit HTML Toggle */}
           <button
@@ -166,100 +152,38 @@ export const CanvasArea: React.FC = () => {
             }`}
             title="HTML Source Editor"
           >
-            <Edit3 size={14} />
-            <span className="hidden sm:inline">{isRawEditing ? 'Save & Preview' : 'Edit HTML'}</span>
-          </button>
-
-          {/* Font Toggle Button */}
-          <button
-            onClick={toggleFontMode}
-            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all duration-200 text-xs font-semibold ${
-              fontMode === 'handwriting'
-                ? 'bg-[#FFF3B0] text-[#4F4310] border-[#E8DC88] shadow-sticky'
-                : 'bg-white text-theme-text border-theme-border hover:bg-theme-sidebar/60'
-            }`}
-            title="Toggle Font (Handwriting / Clean UI)"
-          >
-            <Type size={14} />
-            <span className="hidden sm:inline">
-              {fontMode === 'handwriting' ? '✍️ Handwriting' : '🔤 Clean UI'}
-            </span>
+            <Code size={14} />
+            <span className="hidden sm:inline">{isRawEditing ? 'Save & Preview' : 'Source'}</span>
           </button>
         </div>
       </header>
 
-      {/* Main Canvas Note Page Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 flex justify-center items-start">
-        <div className="relative w-full max-w-4xl min-h-[500px] mb-8">
-          {/* Mobile / Tablet Inlined Sticky Note if present */}
-          {activeNote.content?.stickyNotes && activeNote.content.stickyNotes.length > 0 && !isRawEditing && (
-            <div className="lg:hidden mb-4 space-y-2">
-              {activeNote.content.stickyNotes.map((sticky) => (
-                <div
-                  key={sticky.id}
-                  className="p-3 rounded-xl shadow-sticky border border-[#E8DC88] bg-[#FFF3B0] text-[#4F4310] text-xs sm:text-sm font-handwriting"
-                >
-                  <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
-                    <StickyIcon size={11} />
-                    <span>Memo</span>
-                  </div>
-                  <p className="whitespace-pre-line text-sm sm:text-base leading-snug">{sticky.text}</p>
-                </div>
-              ))}
+      {/* Main Note Canvas / Editor */}
+      {isRawEditing ? (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center items-start">
+          <div className="max-w-4xl w-full bg-white p-6 rounded-2xl border border-theme-border shadow-cozy flex flex-col gap-3">
+            <div className="text-xs text-[#7E7267] font-semibold flex items-center justify-between">
+              <span>Raw HTML Source:</span>
+              <button
+                onClick={handleRawContentSave}
+                className="px-3 py-1 bg-theme-accent text-white text-xs rounded-lg font-semibold hover:bg-[#C26325]"
+              >
+                Save & Exit
+              </button>
             </div>
-          )}
-
-          {/* Note Paper Sheet */}
-          <div
-            className={`w-full min-h-[500px] sm:min-h-[580px] p-4 sm:p-8 md:p-12 rounded-2xl border border-theme-border shadow-cozy-md ${paperClass} transition-all duration-150 overflow-x-auto`}
-          >
-            {isRawEditing ? (
-              <div className="flex flex-col gap-3">
-                <div className="text-xs text-[#7E7267] font-semibold flex items-center gap-1">
-                  <span>HTML Editor for Note Content:</span>
-                </div>
-                <textarea
-                  value={rawContent}
-                  onChange={(e) => setRawContent(e.target.value)}
-                  rows={18}
-                  className="w-full font-mono text-xs p-4 rounded-xl border border-theme-border bg-white text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent"
-                />
-              </div>
-            ) : (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={handleContentBlur}
-                className={`outline-none prose prose-stone max-w-none break-words transition-all duration-150 ${
-                  fontMode === 'handwriting'
-                    ? 'font-handwriting text-xl sm:text-2xl leading-relaxed'
-                    : 'font-ui text-sm sm:text-base leading-normal'
-                }`}
-                dangerouslySetInnerHTML={{ __html: activeNote.contentHtml }}
-              />
-            )}
+            <textarea
+              value={rawContent}
+              onChange={(e) => setRawContent(e.target.value)}
+              rows={20}
+              className="w-full font-mono text-xs p-4 rounded-xl border border-theme-border bg-[#FAF6EE] text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent"
+            />
           </div>
-
-          {/* Desktop Floating Sticky Note */}
-          {activeNote.content?.stickyNotes && activeNote.content.stickyNotes.length > 0 && !isRawEditing && (
-            <div className="absolute right-[-14px] top-6 hidden lg:block max-w-[220px]">
-              {activeNote.content.stickyNotes.map((sticky) => (
-                <div
-                  key={sticky.id}
-                  className="p-3 rounded-xl shadow-sticky border border-[#E8DC88] bg-[#FFF3B0] text-[#4F4310] text-sm font-handwriting rotate-2 transform hover:rotate-0 transition-transform cursor-move"
-                >
-                  <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider mb-1 opacity-70">
-                    <StickyIcon size={12} />
-                    <span>Memo</span>
-                  </div>
-                  <p className="whitespace-pre-line text-base leading-snug">{sticky.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        <CubEditor />
+      )}
     </main>
   );
 };
+
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Note } from '../types/note';
+import { Note, PaperStyle, FontFamilyChoice } from '../types/note';
 
 const INITIAL_DEMO_NOTES: Note[] = [
   {
@@ -13,45 +13,45 @@ const INITIAL_DEMO_NOTES: Note[] = [
     backgroundStyle: 'lined',
     fontFamily: 'Caveat',
     contentHtml: `<h2>🐾 Welcome to Your Cozy Note Desk!</h2>
-<p>Cub Pad is designed for delightful, distraction-free studying, journaling, and note-taking.</p>
+<p>Cub Pad is designed for delightful, distraction-free <mark data-color="#FFF3B0" style="background-color: #FFF3B0;">studying, journaling, and note-taking</mark>.</p>
 
-<table style="width: 100%; border-collapse: collapse; margin-top: 14px; margin-bottom: 14px;">
+<table>
   <thead>
-    <tr style="background: rgba(217, 119, 54, 0.15); text-align: left;">
-      <th style="padding: 8px 12px; border-bottom: 2px solid #D8CBAF;">Feature</th>
-      <th style="padding: 8px 12px; border-bottom: 2px solid #D8CBAF;">Description</th>
-      <th style="padding: 8px 12px; border-bottom: 2px solid #D8CBAF;">Quick Tip</th>
+    <tr>
+      <th>Feature</th>
+      <th>Description</th>
+      <th>Quick Tip</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8; font-weight: 700; color: #D97736;">✍️ Live Editing</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Click anywhere on the paper to type freely.</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Edits save automatically!</td>
+      <td><strong>✍️ Live Editing</strong></td>
+      <td>Click anywhere on the paper to type freely.</td>
+      <td><mark data-color="#D4EDDA" style="background-color: #D4EDDA;">Edits save automatically!</mark></td>
     </tr>
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8; font-weight: 700; color: #2563EB;">🔤 Font Toggle</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Switch between warm handwriting & clean UI fonts.</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Top right toolbar button</td>
+      <td><strong>🎨 Study Highlighter</strong></td>
+      <td>5 pastel colors to highlight vocabulary, terms & ideas.</td>
+      <td><mark data-color="#D0E8FF" style="background-color: #D0E8FF;">Click the highlighter icon</mark></td>
     </tr>
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8; font-weight: 700; color: #16A34A;">📱 Responsive</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Seamless experience on mobile, tablet & desktop.</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Tap ☰ to access your notes on mobile</td>
+      <td><strong>📊 Study Tables</strong></td>
+      <td>Insert custom grids and vocabulary presets.</td>
+      <td><mark data-color="#E8D7FF" style="background-color: #E8D7FF;">Use the Table dropdown</mark></td>
     </tr>
     <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8; font-weight: 700; color: #9333EA;">🏷️ Categories</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Filter and organize notes with instant tags.</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #E8DFC8;">Use the category pills in sidebar</td>
+      <td><strong>📜 Paper Patterns</strong></td>
+      <td>Switch between Ruled, Grid, Dot Matrix & Blank.</td>
+      <td><mark data-color="#FFD6D6" style="background-color: #FFD6D6;">Toolbar pattern picker</mark></td>
     </tr>
   </tbody>
 </table>
 
 <p><strong>Today's Focus:</strong></p>
 <ul>
-  <li>✅ Explore and customize your notes</li>
-  <li>✅ Try switching between Handwriting and Clean UI fonts</li>
-  <li>✅ Create a new category for your daily thoughts or study topics</li>
+  <li>Explore and customize your study notes</li>
+  <li>Try highlighting text with pastel colors</li>
+  <li>Insert a Vocabulary table preset from the Table menu</li>
 </ul>`,
     content: {
       textHtml: '',
@@ -133,6 +133,8 @@ interface NoteState {
   updateNoteContent: (id: string, contentHtml: string) => void;
   updateNoteTitle: (id: string, title: string) => void;
   updateNoteCategory: (id: string, category: string) => void;
+  updateNoteBackgroundStyle: (id: string, backgroundStyle: PaperStyle) => void;
+  updateNoteFontFamily: (id: string, fontFamily: FontFamilyChoice) => void;
   deleteNote: (id: string) => void;
   setFontMode: (mode: 'handwriting' | 'ui') => void;
   toggleFontMode: () => void;
@@ -224,6 +226,34 @@ export const useNoteZustandStore = create<NoteState>()(
         }));
       },
 
+      updateNoteBackgroundStyle: (id: string, backgroundStyle: import('../types/note').PaperStyle) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id
+              ? {
+                  ...note,
+                  backgroundStyle,
+                  updatedAt: new Date().toISOString(),
+                }
+              : note
+          ),
+        }));
+      },
+
+      updateNoteFontFamily: (id: string, fontFamily: import('../types/note').FontFamilyChoice) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id
+              ? {
+                  ...note,
+                  fontFamily,
+                  updatedAt: new Date().toISOString(),
+                }
+              : note
+          ),
+        }));
+      },
+
       deleteNote: (id: string) => {
         set((state) => {
           const newNotes = state.notes.filter((note) => note.id !== id);
@@ -262,7 +292,7 @@ export const useNoteZustandStore = create<NoteState>()(
       },
     }),
     {
-      name: 'cub-pad-notes-storage-v2',
+      name: 'cub-pad-notes-storage-v3',
       storage: createJSONStorage(() => localStorage),
     }
   )
