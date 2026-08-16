@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Note, PaperStyle, FontFamilyChoice } from '../types/note';
+import { Note, PaperStyle, FontFamilyChoice, VectorShape, DrawingTool } from '../types/note';
 
 const INITIAL_DEMO_NOTES: Note[] = [
   {
@@ -12,6 +12,30 @@ const INITIAL_DEMO_NOTES: Note[] = [
     theme: 'golden_retriever',
     backgroundStyle: 'lined',
     fontFamily: 'Caveat',
+    vectorShapes: [
+      {
+        id: 'demo_arrow_1',
+        type: 'arrow',
+        startX: 40,
+        startY: 72,
+        endX: 380,
+        endY: 72,
+        color: '#D97736',
+        strokeWidth: 2,
+        isDashed: false,
+      },
+      {
+        id: 'demo_line_2',
+        type: 'line',
+        startX: 40,
+        startY: 550,
+        endX: 320,
+        endY: 550,
+        color: '#6A8E7F',
+        strokeWidth: 2,
+        isDashed: true,
+      },
+    ],
     contentHtml: `<h2>🐾 Welcome to Your Cozy Note Desk!</h2>
 <p>Cub Pad is designed for delightful, distraction-free <mark data-color="#FFF3B0" style="background-color: #FFF3B0;">studying, journaling, and note-taking</mark>.</p>
 
@@ -85,6 +109,7 @@ const INITIAL_DEMO_NOTES: Note[] = [
     theme: 'golden_retriever',
     backgroundStyle: 'grid',
     fontFamily: 'Patrick Hand',
+    vectorShapes: [],
     contentHtml: `<h2>💡 Creative Projects & Inspiration</h2>
 <p>Here are a few core ideas and priorities for this week:</p>
 
@@ -127,6 +152,12 @@ interface NoteState {
   fontMode: 'handwriting' | 'ui';
   isSidebarOpen: boolean;
 
+  // Drawing Tools Session State
+  activeDrawingTool: DrawingTool;
+  drawingColor: string;
+  drawingStrokeWidth: number;
+  drawingIsDashed: boolean;
+
   // Actions
   addNote: (category?: string, title?: string) => string;
   selectNote: (id: string) => void;
@@ -141,6 +172,16 @@ interface NoteState {
   setSidebarOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
   getActiveNote: () => Note | undefined;
+
+  // Drawing Actions
+  setActiveDrawingTool: (tool: DrawingTool) => void;
+  setDrawingColor: (color: string) => void;
+  setDrawingStrokeWidth: (width: number) => void;
+  setDrawingIsDashed: (isDashed: boolean) => void;
+  addVectorShape: (noteId: string, shape: VectorShape) => void;
+  undoLastVectorShape: (noteId: string) => void;
+  deleteVectorShape: (noteId: string, shapeId: string) => void;
+  clearAllVectorShapes: (noteId: string) => void;
 }
 
 export const useNoteZustandStore = create<NoteState>()(
@@ -150,6 +191,12 @@ export const useNoteZustandStore = create<NoteState>()(
       activeNoteId: 'note_quickstart_01',
       fontMode: 'handwriting',
       isSidebarOpen: false,
+
+      // Default drawing tool configuration
+      activeDrawingTool: 'none',
+      drawingColor: '#4A3B32', // Warm Brown
+      drawingStrokeWidth: 2,
+      drawingIsDashed: false,
 
       addNote: (category = 'General', title = 'New Note') => {
         const newId = `note_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -162,6 +209,7 @@ export const useNoteZustandStore = create<NoteState>()(
           theme: 'golden_retriever',
           backgroundStyle: 'lined',
           fontFamily: 'Caveat',
+          vectorShapes: [],
           contentHtml: `<h2>🐾 ${title || 'New Note'}</h2><p>Start typing your notes here...</p>`,
           content: {
             textHtml: '',
@@ -226,7 +274,7 @@ export const useNoteZustandStore = create<NoteState>()(
         }));
       },
 
-      updateNoteBackgroundStyle: (id: string, backgroundStyle: import('../types/note').PaperStyle) => {
+      updateNoteBackgroundStyle: (id: string, backgroundStyle: PaperStyle) => {
         set((state) => ({
           notes: state.notes.map((note) =>
             note.id === id
@@ -240,7 +288,7 @@ export const useNoteZustandStore = create<NoteState>()(
         }));
       },
 
-      updateNoteFontFamily: (id: string, fontFamily: import('../types/note').FontFamilyChoice) => {
+      updateNoteFontFamily: (id: string, fontFamily: FontFamilyChoice) => {
         set((state) => ({
           notes: state.notes.map((note) =>
             note.id === id
@@ -290,11 +338,83 @@ export const useNoteZustandStore = create<NoteState>()(
         const { notes, activeNoteId } = get();
         return notes.find((n) => n.id === activeNoteId);
       },
+
+      // Drawing Actions
+      setActiveDrawingTool: (tool: DrawingTool) => {
+        set({ activeDrawingTool: tool });
+      },
+
+      setDrawingColor: (color: string) => {
+        set({ drawingColor: color });
+      },
+
+      setDrawingStrokeWidth: (width: number) => {
+        set({ drawingStrokeWidth: width });
+      },
+
+      setDrawingIsDashed: (isDashed: boolean) => {
+        set({ drawingIsDashed: isDashed });
+      },
+
+      addVectorShape: (noteId: string, shape: VectorShape) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentShapes = note.vectorShapes || note.content?.vectors || [];
+            return {
+              ...note,
+              vectorShapes: [...currentShapes, shape],
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      undoLastVectorShape: (noteId: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentShapes = note.vectorShapes || note.content?.vectors || [];
+            if (currentShapes.length === 0) return note;
+            return {
+              ...note,
+              vectorShapes: currentShapes.slice(0, -1),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      deleteVectorShape: (noteId: string, shapeId: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentShapes = note.vectorShapes || note.content?.vectors || [];
+            return {
+              ...note,
+              vectorShapes: currentShapes.filter((s) => s.id !== shapeId),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      clearAllVectorShapes: (noteId: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            return {
+              ...note,
+              vectorShapes: [],
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
     }),
     {
-      name: 'cub-pad-notes-storage-v3',
+      name: 'cub-pad-notes-storage-v4',
       storage: createJSONStorage(() => localStorage),
     }
   )
 );
-

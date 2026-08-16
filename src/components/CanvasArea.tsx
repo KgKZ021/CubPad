@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNoteZustandStore } from '../stores/useNoteZustandStore';
 import { Clock, Edit3, Check, Menu, FileText, Code } from 'lucide-react';
 import { CubEditor } from './Editor/CubEditor';
+import { Tooltip } from './UI/Tooltip';
 
 export const CanvasArea: React.FC = () => {
   const {
@@ -104,15 +105,17 @@ export const CanvasArea: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div
-              onClick={() => setIsEditingTitle(true)}
-              className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group py-1 px-1.5 sm:px-2 -ml-1 rounded-lg hover:bg-theme-sidebar/50 transition-colors min-w-0 max-w-full"
-            >
-              <h2 className="text-base sm:text-lg font-bold font-display text-theme-text truncate">
-                {activeNote.title}
-              </h2>
-              <Edit3 size={13} className="text-[#9F9386] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hidden sm:inline" />
-            </div>
+            <Tooltip label="Rename Note" description="Click to edit note title" position="bottom">
+              <div
+                onClick={() => setIsEditingTitle(true)}
+                className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group py-1 px-1.5 sm:px-2 -ml-1 rounded-lg hover:bg-theme-sidebar/50 transition-colors min-w-0 max-w-full"
+              >
+                <h2 className="text-base sm:text-lg font-bold font-display text-theme-text truncate">
+                  {activeNote.title}
+                </h2>
+                <Edit3 size={13} className="text-[#9F9386] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hidden sm:inline" />
+              </div>
+            </Tooltip>
           )}
 
           <span className="hidden lg:inline-flex text-[11px] font-semibold bg-[#EAE1CD] text-[#5A4F43] px-2 py-0.5 rounded-full border border-theme-border flex-shrink-0">
@@ -136,25 +139,27 @@ export const CanvasArea: React.FC = () => {
           <div className="h-4 w-[1px] bg-theme-border hidden xl:block" />
 
           {/* Quick Edit HTML Toggle */}
-          <button
-            onClick={() => {
-              if (isRawEditing) {
-                handleRawContentSave();
-              } else {
-                setRawContent(activeNote.contentHtml);
-                setIsRawEditing(true);
-              }
-            }}
-            className={`flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all ${
-              isRawEditing
-                ? 'bg-theme-accent text-white border-theme-accent font-semibold shadow-xs'
-                : 'bg-white text-[#5D5144] border-theme-border hover:bg-theme-sidebar/60'
-            }`}
-            title="HTML Source Editor"
-          >
-            <Code size={14} />
-            <span className="hidden sm:inline">{isRawEditing ? 'Save & Preview' : 'Source'}</span>
-          </button>
+          <Tooltip label={isRawEditing ? 'Save & Preview' : 'Source Code Editor'} description="View or edit direct HTML source markup">
+            <button
+              onClick={() => {
+                if (isRawEditing) {
+                  handleRawContentSave();
+                } else {
+                  setRawContent(activeNote.contentHtml);
+                  setIsRawEditing(true);
+                }
+              }}
+              className={`flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-1.5 rounded-xl border transition-all ${
+                isRawEditing
+                  ? 'bg-theme-accent text-white border-theme-accent font-semibold shadow-xs'
+                  : 'bg-white text-[#5D5144] border-theme-border hover:bg-theme-sidebar/60'
+              }`}
+              aria-label="HTML Source Editor"
+            >
+              <Code size={14} />
+              <span className="hidden sm:inline">{isRawEditing ? 'Save & Preview' : 'Source'}</span>
+            </button>
+          </Tooltip>
         </div>
       </header>
 
@@ -185,5 +190,3 @@ export const CanvasArea: React.FC = () => {
     </main>
   );
 };
-
-

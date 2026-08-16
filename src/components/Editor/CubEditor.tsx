@@ -11,6 +11,7 @@ import Color from '@tiptap/extension-color';
 
 import { useNoteZustandStore } from '../../stores/useNoteZustandStore';
 import { EditorToolbar } from './EditorToolbar';
+import { VectorOverlay } from '../Canvas/VectorOverlay';
 import { StickyNote as StickyIcon } from 'lucide-react';
 
 export const CubEditor: React.FC = () => {
@@ -103,12 +104,16 @@ export const CubEditor: React.FC = () => {
             </div>
           )}
 
-          {/* Note Paper Sheet with Background Pattern */}
+          {/* Note Paper Sheet with Background Pattern & Vector Overlay */}
           <div
-            className={`w-full min-h-[520px] sm:min-h-[600px] p-5 sm:p-8 md:p-12 rounded-2xl border border-theme-border shadow-cozy-md ${paperClass} transition-all duration-150 overflow-x-auto`}
+            className={`relative w-full min-h-[520px] sm:min-h-[600px] p-5 sm:p-8 md:p-12 rounded-2xl border border-theme-border shadow-cozy-md ${paperClass} transition-all duration-150 overflow-x-auto`}
           >
+            {/* Interactive SVG Vector Overlay for Lines, Underlines, Concept Arrows & Eraser */}
+            <VectorOverlay noteId={activeNote.id} />
+
+            {/* Rich Text Editor Content */}
             <div
-              className={`transition-all duration-150 ${
+              className={`relative z-10 transition-all duration-150 ${
                 fontMode === 'handwriting'
                   ? 'font-handwriting text-xl sm:text-2xl leading-relaxed'
                   : 'font-ui text-sm sm:text-base leading-normal'
@@ -120,7 +125,7 @@ export const CubEditor: React.FC = () => {
 
           {/* Desktop Floating Sticky Note */}
           {activeNote.content?.stickyNotes && activeNote.content.stickyNotes.length > 0 && (
-            <div className="absolute right-[-14px] top-6 hidden lg:block max-w-[220px]">
+            <div className="absolute right-[-14px] top-6 hidden lg:block max-w-[220px] z-30 pointer-events-auto">
               {activeNote.content.stickyNotes.map((sticky) => (
                 <div
                   key={sticky.id}

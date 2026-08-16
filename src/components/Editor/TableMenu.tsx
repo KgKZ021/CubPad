@@ -9,6 +9,7 @@ import {
   Columns,
   Sparkles,
 } from 'lucide-react';
+import { Tooltip } from '../UI/Tooltip';
 
 interface TableMenuProps {
   editor: Editor | null;
@@ -91,28 +92,29 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
 
   return (
     <div className="relative inline-flex items-center" ref={menuRef}>
-      {/* Table Toggle Button */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={(e) => {
-          e.preventDefault();
-          setIsOpen((prev) => !prev);
-        }}
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all duration-150 cursor-pointer ${
-          isInsideTable
-            ? 'bg-amber-100/90 text-amber-900 border-amber-300 shadow-xs'
-            : isOpen
-            ? 'bg-theme-sidebar text-theme-text border-theme-border'
-            : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
-        }`}
-        title="Study Tables & Grids"
-        aria-label="Study tables generator"
-      >
-        <TableIcon size={14} className="text-theme-accent flex-shrink-0" />
-        <span>Table</span>
-        <ChevronDown size={12} className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      {/* Table Toggle Button with Tooltip */}
+      <Tooltip label="Study Tables" description="Insert custom grid, Vocabulary or Comparison preset tables">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+          }}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all duration-150 cursor-pointer ${
+            isInsideTable
+              ? 'bg-amber-100/90 text-amber-900 border-amber-300 shadow-xs'
+              : isOpen
+              ? 'bg-theme-sidebar text-theme-text border-theme-border'
+              : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
+          }`}
+          aria-label="Study tables generator"
+        >
+          <TableIcon size={14} className="text-theme-accent flex-shrink-0" />
+          <span>Table</span>
+          <ChevronDown size={12} className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </Tooltip>
 
       {/* Table Dropdown Menu */}
       {isOpen && (

@@ -12,16 +12,22 @@ export interface StickyNote {
   height?: number;
 }
 
-export interface VectorLine {
+export interface VectorShape {
   id: string;
-  type: 'straight_line' | 'underline' | 'arrow';
+  type: 'line' | 'arrow';
   startX: number;
   startY: number;
   endX: number;
   endY: number;
-  strokeColor: string;
+  color: string;
   strokeWidth: number;
+  isDashed?: boolean;
 }
+
+// Backward compatible alias
+export type VectorLine = VectorShape;
+
+export type DrawingTool = 'none' | 'line' | 'arrow' | 'eraser';
 
 export interface StickerItem {
   id: string;
@@ -34,7 +40,7 @@ export interface StickerItem {
 export interface NoteContent {
   textHtml: string;
   stickyNotes?: StickyNote[];
-  vectors?: VectorLine[];
+  vectors?: VectorShape[];
   stickers?: StickerItem[];
 }
 
@@ -48,5 +54,6 @@ export interface Note {
   theme?: PuppyTheme;
   backgroundStyle?: PaperStyle;
   fontFamily?: FontFamilyChoice;
+  vectorShapes?: VectorShape[]; // Direct array of vector lines/arrows
   content?: NoteContent; // Rich forward-compatible container
 }

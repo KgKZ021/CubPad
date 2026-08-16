@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 import { Highlighter, ChevronDown, Check, Ban } from 'lucide-react';
 import { StudyHighlightColor, STUDY_HIGHLIGHT_COLORS } from '../../types/highlighter';
+import { Tooltip } from '../UI/Tooltip';
 
 interface HighlighterMenuProps {
   editor: Editor | null;
@@ -57,46 +58,48 @@ export const HighlighterMenu: React.FC<HighlighterMenuProps> = ({ editor }) => {
 
   return (
     <div className="relative inline-flex items-center" ref={menuRef}>
-      {/* Split Button: Main Button */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={handleApplySelectedColor}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded-l-lg border text-xs font-semibold transition-all duration-150 cursor-pointer ${
-          isHighlighted
-            ? 'bg-amber-100/90 text-amber-900 border-amber-300 shadow-xs'
-            : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
-        }`}
-        title={`Highlight with ${selectedColor.name}`}
-        aria-label="Toggle study highlight"
-      >
-        <Highlighter size={14} className="flex-shrink-0 text-amber-700" />
-        <span
-          className="w-3.5 h-3.5 rounded-full border shadow-2xs flex-shrink-0"
-          style={{ backgroundColor: selectedColor.color, borderColor: selectedColor.borderColor }}
-        />
-      </button>
+      {/* Split Button: Main Button with Tooltip */}
+      <Tooltip label={`Highlight (${selectedColor.name})`} description="Highlight selected text with study pastel color">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleApplySelectedColor}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-l-lg border text-xs font-semibold transition-all duration-150 cursor-pointer ${
+            isHighlighted
+              ? 'bg-amber-100/90 text-amber-900 border-amber-300 shadow-xs'
+              : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
+          }`}
+          aria-label="Toggle study highlight"
+        >
+          <Highlighter size={14} className="flex-shrink-0 text-amber-700" />
+          <span
+            className="w-3.5 h-3.5 rounded-full border shadow-2xs flex-shrink-0"
+            style={{ backgroundColor: selectedColor.color, borderColor: selectedColor.borderColor }}
+          />
+        </button>
+      </Tooltip>
 
-      {/* Split Button: Arrow Trigger */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={(e) => {
-          e.preventDefault();
-          setIsOpen((prev) => !prev);
-        }}
-        className={`px-1.5 py-1 rounded-r-lg border-y border-r text-xs transition-all duration-150 cursor-pointer ${
-          isOpen
-            ? 'bg-theme-sidebar text-theme-text border-theme-border'
-            : isHighlighted
-            ? 'bg-amber-100/90 text-amber-900 border-amber-300'
-            : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
-        }`}
-        title="Highlighter color palette"
-        aria-label="Open highlighter color palette"
-      >
-        <ChevronDown size={12} className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      {/* Split Button: Arrow Trigger with Tooltip */}
+      <Tooltip label="5 Highlighter Colors" description="Choose Yellow, Green, Blue, Purple, or Rose">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+          }}
+          className={`px-1.5 py-1 rounded-r-lg border-y border-r text-xs transition-all duration-150 cursor-pointer ${
+            isOpen
+              ? 'bg-theme-sidebar text-theme-text border-theme-border'
+              : isHighlighted
+              ? 'bg-amber-100/90 text-amber-900 border-amber-300'
+              : 'bg-white text-theme-text border-theme-border/80 hover:bg-theme-sidebar/50'
+          }`}
+          aria-label="Open highlighter color palette"
+        >
+          <ChevronDown size={12} className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </Tooltip>
 
       {/* Dropdown Menu */}
       {isOpen && (
