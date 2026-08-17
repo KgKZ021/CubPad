@@ -2,15 +2,32 @@ export type PaperStyle = 'lined' | 'grid' | 'dot' | 'blank';
 export type FontFamilyChoice = 'Caveat' | 'Patrick Hand' | 'Nunito' | 'Fredoka';
 export type PuppyTheme = 'golden_retriever' | 'corgi' | 'shiba';
 
-export interface StickyNote {
+export interface StickyNoteItem {
   id: string;
+  title?: string;
   x: number;
   y: number;
   color: string;
   text: string;
+  isMinimized?: boolean;
   width?: number;
   height?: number;
 }
+
+// Backward compatible alias
+export type StickyNote = StickyNoteItem;
+
+export interface MascotStickerItem {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation?: number;
+}
+
+// Backward compatible alias
+export type StickerItem = MascotStickerItem;
 
 export interface VectorShape {
   id: string;
@@ -29,19 +46,11 @@ export type VectorLine = VectorShape;
 
 export type DrawingTool = 'none' | 'line' | 'arrow' | 'eraser';
 
-export interface StickerItem {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  scale: number;
-}
-
 export interface NoteContent {
   textHtml: string;
-  stickyNotes?: StickyNote[];
+  stickyNotes?: StickyNoteItem[];
   vectors?: VectorShape[];
-  stickers?: StickerItem[];
+  stickers?: MascotStickerItem[];
 }
 
 export interface Note {
@@ -55,5 +64,7 @@ export interface Note {
   backgroundStyle?: PaperStyle;
   fontFamily?: FontFamilyChoice;
   vectorShapes?: VectorShape[]; // Direct array of vector lines/arrows
+  stickyNotes?: StickyNoteItem[]; // Direct array of floating sticky notes
+  mascotStickers?: MascotStickerItem[]; // Direct array of floating mascot stickers
   content?: NoteContent; // Rich forward-compatible container
 }

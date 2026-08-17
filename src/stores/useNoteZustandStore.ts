@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Note, PaperStyle, FontFamilyChoice, VectorShape, DrawingTool } from '../types/note';
+import {
+  Note,
+  PaperStyle,
+  FontFamilyChoice,
+  VectorShape,
+  DrawingTool,
+  StickyNoteItem,
+  MascotStickerItem,
+} from '../types/note';
 
 const INITIAL_DEMO_NOTES: Note[] = [
   {
@@ -34,6 +42,42 @@ const INITIAL_DEMO_NOTES: Note[] = [
         color: '#6A8E7F',
         strokeWidth: 2,
         isDashed: true,
+      },
+    ],
+    stickyNotes: [
+      {
+        id: 'sticky_demo_1',
+        x: 520,
+        y: 60,
+        color: '#FFF3B0',
+        text: '💡 Pro Tip:\nClick on the title in the header above to rename your note anytime!',
+        isMinimized: false,
+      },
+      {
+        id: 'sticky_demo_2',
+        x: 520,
+        y: 280,
+        color: '#D4EDDA',
+        text: '🐾 Sticky Memo:\nDrag me anywhere on your desk! Double-click margins to add a new card.',
+        isMinimized: false,
+      },
+    ],
+    mascotStickers: [
+      {
+        id: 'stk_demo_1',
+        type: 'pup_cheer',
+        x: 480,
+        y: 470,
+        scale: 1.05,
+        rotation: 3,
+      },
+      {
+        id: 'stk_demo_2',
+        type: 'paw_done',
+        x: 620,
+        y: 490,
+        scale: 0.95,
+        rotation: -4,
       },
     ],
     contentHtml: `<h2>🐾 Welcome to Your Cozy Note Desk!</h2>
@@ -79,25 +123,9 @@ const INITIAL_DEMO_NOTES: Note[] = [
 </ul>`,
     content: {
       textHtml: '',
-      stickyNotes: [
-        {
-          id: 'sticky_demo_1',
-          x: 480,
-          y: 80,
-          color: '#FFF3B0',
-          text: '💡 Pro Tip:\nClick on the title in the header above to rename your note anytime!',
-        },
-      ],
+      stickyNotes: [],
       vectors: [],
-      stickers: [
-        {
-          id: 'stk_demo_1',
-          type: 'puppy_happy',
-          x: 420,
-          y: 20,
-          scale: 1.0,
-        },
-      ],
+      stickers: [],
     },
   },
   {
@@ -110,6 +138,26 @@ const INITIAL_DEMO_NOTES: Note[] = [
     backgroundStyle: 'grid',
     fontFamily: 'Patrick Hand',
     vectorShapes: [],
+    stickyNotes: [
+      {
+        id: 'sticky_demo_3',
+        x: 480,
+        y: 80,
+        color: '#E8D7FF',
+        text: '✨ Reminder:\nSmall daily progress leads to huge long-term results. Keep going!',
+        isMinimized: false,
+      },
+    ],
+    mascotStickers: [
+      {
+        id: 'stk_demo_3',
+        type: 'study_star',
+        x: 490,
+        y: 220,
+        scale: 1.1,
+        rotation: 6,
+      },
+    ],
     contentHtml: `<h2>💡 Creative Projects & Inspiration</h2>
 <p>Here are a few core ideas and priorities for this week:</p>
 
@@ -125,21 +173,13 @@ const INITIAL_DEMO_NOTES: Note[] = [
   <li>[x] Set up responsive layout for all mobile screens</li>
   <li>[x] Translate all controls and starter guides to English</li>
   <li>[ ] Add audio ambient lofi background sounds (planned)</li>
-  <li>[ ] Add custom sticker drawer (planned)</li>
+  <li>[x] Add draggable floating sticky notes & mascot sticker deck</li>
 </ul>
 
 <p><em>"Creativity is intelligence having fun." — Albert Einstein</em></p>`,
     content: {
       textHtml: '',
-      stickyNotes: [
-        {
-          id: 'sticky_demo_2',
-          x: 460,
-          y: 110,
-          color: '#FFF3B0',
-          text: '✨ Reminder:\nSmall daily progress leads to huge long-term results. Keep going!',
-        },
-      ],
+      stickyNotes: [],
       vectors: [],
       stickers: [],
     },
@@ -151,6 +191,7 @@ interface NoteState {
   activeNoteId: string | null;
   fontMode: 'handwriting' | 'ui';
   isSidebarOpen: boolean;
+  isStickerDrawerOpen: boolean;
 
   // Drawing Tools Session State
   activeDrawingTool: DrawingTool;
@@ -171,6 +212,8 @@ interface NoteState {
   toggleFontMode: () => void;
   setSidebarOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
+  setStickerDrawerOpen: (isOpen: boolean) => void;
+  toggleStickerDrawer: () => void;
   getActiveNote: () => Note | undefined;
 
   // Drawing Actions
@@ -182,6 +225,21 @@ interface NoteState {
   undoLastVectorShape: (noteId: string) => void;
   deleteVectorShape: (noteId: string, shapeId: string) => void;
   clearAllVectorShapes: (noteId: string) => void;
+
+  // Sticky Notes Actions
+  addStickyNote: (noteId: string, x?: number, y?: number, color?: string, text?: string, title?: string) => string;
+  updateStickyNoteTitle: (noteId: string, id: string, title: string) => void;
+  updateStickyNotePosition: (noteId: string, id: string, x: number, y: number) => void;
+  updateStickyNoteText: (noteId: string, id: string, text: string) => void;
+  updateStickyNoteColor: (noteId: string, id: string, color: string) => void;
+  toggleStickyNoteMinimized: (noteId: string, id: string) => void;
+  deleteStickyNote: (noteId: string, id: string) => void;
+
+  // Mascot Stickers Actions
+  addMascotSticker: (noteId: string, stickerType: string, x: number, y: number, scale?: number, rotation?: number) => string;
+  updateMascotStickerPosition: (noteId: string, id: string, x: number, y: number) => void;
+  updateMascotStickerScale: (noteId: string, id: string, scale: number) => void;
+  deleteMascotSticker: (noteId: string, id: string) => void;
 }
 
 export const useNoteZustandStore = create<NoteState>()(
@@ -191,6 +249,7 @@ export const useNoteZustandStore = create<NoteState>()(
       activeNoteId: 'note_quickstart_01',
       fontMode: 'handwriting',
       isSidebarOpen: false,
+      isStickerDrawerOpen: false,
 
       // Default drawing tool configuration
       activeDrawingTool: 'none',
@@ -210,6 +269,8 @@ export const useNoteZustandStore = create<NoteState>()(
           backgroundStyle: 'lined',
           fontFamily: 'Caveat',
           vectorShapes: [],
+          stickyNotes: [],
+          mascotStickers: [],
           contentHtml: `<h2>🐾 ${title || 'New Note'}</h2><p>Start typing your notes here...</p>`,
           content: {
             textHtml: '',
@@ -222,7 +283,7 @@ export const useNoteZustandStore = create<NoteState>()(
         set((state) => ({
           notes: [newNote, ...state.notes],
           activeNoteId: newId,
-          isSidebarOpen: false, // Auto-close drawer on mobile when creating
+          isSidebarOpen: false,
         }));
 
         return newId;
@@ -334,6 +395,14 @@ export const useNoteZustandStore = create<NoteState>()(
         set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
       },
 
+      setStickerDrawerOpen: (isOpen: boolean) => {
+        set({ isStickerDrawerOpen: isOpen });
+      },
+
+      toggleStickerDrawer: () => {
+        set((state) => ({ isStickerDrawerOpen: !state.isStickerDrawerOpen }));
+      },
+
       getActiveNote: () => {
         const { notes, activeNoteId } = get();
         return notes.find((n) => n.id === activeNoteId);
@@ -411,9 +480,201 @@ export const useNoteZustandStore = create<NoteState>()(
           }),
         }));
       },
+
+      // Sticky Notes Actions
+      addStickyNote: (noteId: string, x = 460, y = 100, color = '#FFF3B0', text = 'New Note...', title = 'Memo') => {
+        const newStickyId = `sticky_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newSticky: StickyNoteItem = {
+          id: newStickyId,
+          title,
+          x,
+          y,
+          color,
+          text,
+          isMinimized: false,
+        };
+
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: [...currentStickies, newSticky],
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+
+        return newStickyId;
+      },
+
+      updateStickyNoteTitle: (noteId: string, id: string, title: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, title } : s)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      updateStickyNotePosition: (noteId: string, id: string, x: number, y: number) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, x, y } : s)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      updateStickyNoteText: (noteId: string, id: string, text: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, text } : s)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      updateStickyNoteColor: (noteId: string, id: string, color: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, color } : s)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      toggleStickyNoteMinimized: (noteId: string, id: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.map((s) =>
+                s.id === id ? { ...s, isMinimized: !s.isMinimized } : s
+              ),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      deleteStickyNote: (noteId: string, id: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
+            return {
+              ...note,
+              stickyNotes: currentStickies.filter((s) => s.id !== id),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      // Mascot Stickers Actions
+      addMascotSticker: (
+        noteId: string,
+        stickerType: string,
+        x = 420,
+        y = 200,
+        scale = 1.0,
+        rotation = Math.floor(Math.random() * 12) - 6
+      ) => {
+        const newStickerId = `stk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newSticker: MascotStickerItem = {
+          id: newStickerId,
+          type: stickerType,
+          x,
+          y,
+          scale,
+          rotation,
+        };
+
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickers = note.mascotStickers || note.content?.stickers || [];
+            return {
+              ...note,
+              mascotStickers: [...currentStickers, newSticker],
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+
+        return newStickerId;
+      },
+
+      updateMascotStickerPosition: (noteId: string, id: string, x: number, y: number) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickers = note.mascotStickers || note.content?.stickers || [];
+            return {
+              ...note,
+              mascotStickers: currentStickers.map((stk) => (stk.id === id ? { ...stk, x, y } : stk)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      updateMascotStickerScale: (noteId: string, id: string, scale: number) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickers = note.mascotStickers || note.content?.stickers || [];
+            return {
+              ...note,
+              mascotStickers: currentStickers.map((stk) =>
+                stk.id === id ? { ...stk, scale: Math.max(0.6, Math.min(2.0, scale)) } : stk
+              ),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      deleteMascotSticker: (noteId: string, id: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentStickers = note.mascotStickers || note.content?.stickers || [];
+            return {
+              ...note,
+              mascotStickers: currentStickers.filter((stk) => stk.id !== id),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
     }),
     {
-      name: 'cub-pad-notes-storage-v4',
+      name: 'cub-pad-notes-storage-v5',
       storage: createJSONStorage(() => localStorage),
     }
   )

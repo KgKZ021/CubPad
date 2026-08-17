@@ -60,8 +60,34 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Section 1: Vector Drawing Overlay */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Section 1: Sticky Notes & Mascot Stickers */}
+          <div className="bg-[#FFF8E7] p-4 rounded-2xl border border-amber-200/80">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-950 mb-3">
+              <span className="text-base">🐾</span>
+              <span>Floating Sticky Notes & Mascot Sticker Deck</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                <span className="text-[#5D5144]">New Sticky Memo</span>
+                <span className="text-[11px] text-[#7E7267]">+ Sticky Note / Double-click margins</span>
+              </div>
+              <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                <span className="text-[#5D5144]">Pastel Palettes</span>
+                <span className="text-[11px] text-[#7E7267]">Yellow, Coral, Mint, Blue, Lavender</span>
+              </div>
+              <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                <span className="text-[#5D5144]">Mascot Sticker Box</span>
+                <span className="text-[11px] text-[#7E7267]">Click "Stickers" in toolbar to stamp</span>
+              </div>
+              <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                <span className="text-[#5D5144]">Scale & Move Stickers</span>
+                <span className="text-[11px] text-[#7E7267]">Drag to move; hover for (+ / -) scale</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Vector Drawing Overlay */}
           <div className="bg-[#FAF5EC] p-4 rounded-2xl border border-theme-border/80">
             <div className="flex items-center gap-2 text-sm font-bold text-theme-text mb-3">
               <PenTool size={16} className="text-theme-accent" />
@@ -101,7 +127,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             </div>
           </div>
 
-          {/* Section 2: Rich Text Formatting */}
+          {/* Section 3: Rich Text Formatting */}
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-theme-text mb-3">
               <Command size={16} className="text-theme-accent" />
@@ -159,8 +185,8 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             </div>
           </div>
 
-          {/* Section 3: Study Tools & Paper Customization */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Section 4: Study Tools & Paper Customization */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Highlighter */}
             <div className="p-3.5 bg-white rounded-2xl border border-theme-border/80">
               <div className="flex items-center gap-2 text-xs font-bold text-theme-text mb-2">

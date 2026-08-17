@@ -27,6 +27,7 @@ import {
   Check,
   RotateCcw,
   HelpCircle,
+  StickyNote as StickyIcon,
 } from 'lucide-react';
 import { HighlighterMenu } from './HighlighterMenu';
 import { TableMenu } from './TableMenu';
@@ -62,6 +63,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     setDrawingIsDashed,
     undoLastVectorShape,
     clearAllVectorShapes,
+    addStickyNote,
+    isStickerDrawerOpen,
+    toggleStickerDrawer,
   } = useNoteZustandStore();
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
@@ -71,9 +75,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
   // Global shortcut to open help/shortcuts modal (? or Cmd+/)
   useEffect(() => {
     const handleGlobalShortcuts = (e: KeyboardEvent) => {
-      // Check if user pressed ? (shift + /) outside of editor focus or Cmd+/
       if ((e.key === '?' || ((e.metaKey || e.ctrlKey) && e.key === '/')) && !isShortcutsOpen) {
-        // If not typing in input/textarea
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
           e.preventDefault();
@@ -96,6 +98,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
   const currentPaperStyle: PaperStyle = activeNote.backgroundStyle || 'lined';
   const isInsideTable = editor.isActive('table');
   const shapes = activeNote.vectorShapes || activeNote.content?.vectors || [];
+  const stickies = activeNote.stickyNotes || activeNote.content?.stickyNotes || [];
+  const stickers = activeNote.mascotStickers || activeNote.content?.stickers || [];
   const isDrawingMode = activeDrawingTool !== 'none';
 
   const handlePaperStyleChange = (style: PaperStyle, e: React.MouseEvent) => {
@@ -119,6 +123,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
       setIsConfirmingClear(true);
       setTimeout(() => setIsConfirmingClear(false), 3500);
     }
+  };
+
+  const handleAddSticky = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Offset each newly added sticky note so they don't directly stack
+    const newX = 480 + (stickies.length % 3) * 20;
+    const newY = 70 + (stickies.length % 5) * 40;
+    addStickyNote(activeNote.id, newX, newY, '#FFF3B0', '🐾 New Reminder:\n');
   };
 
   return (
@@ -362,7 +374,50 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
               </Tooltip>
             </div>
 
-            {/* Group 7: Paper Pattern Switcher */}
+            {/* Group 7: Sticky Cards & Mascot Sticker Box */}
+            <div className="flex items-center gap-1 pr-1 border-r border-theme-border/70">
+              {/* Add Sticky Note */}
+              <Tooltip label="+ Sticky Note" description="Create a draggable pastel memo note on your desk">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleAddSticky}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-[#5D5144] border border-theme-border hover:bg-amber-50/70 hover:border-amber-300 transition-all cursor-pointer shadow-xs"
+                >
+                  <StickyIcon size={14} className="text-amber-600" />
+                  <span>Sticky Note</span>
+                  {stickies.length > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded-full text-[10px] font-bold">
+                      {stickies.length}
+                    </span>
+                  )}
+                </button>
+              </Tooltip>
+
+              {/* Mascot Sticker Box Toggle */}
+              <Tooltip label="Mascot Sticker Box" description="Stamp cute puppy mascot badges, stars & pins">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={toggleStickerDrawer}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                    isStickerDrawerOpen
+                      ? 'bg-theme-accent text-white shadow-theme-accent/20 ring-2 ring-theme-accent/30'
+                      : 'bg-white text-[#5D5144] border border-theme-border hover:bg-theme-sidebar/70'
+                  }`}
+                >
+                  <span className="text-sm">🐾</span>
+                  <span>Stickers</span>
+                  {stickers.length > 0 && !isStickerDrawerOpen && (
+                    <span className="ml-0.5 px-1.5 py-0.2 bg-[#F0E6D2] text-[#6A5D4D] rounded-full text-[10px] font-bold">
+                      {stickers.length}
+                    </span>
+                  )}
+                </button>
+              </Tooltip>
+            </div>
+
+            {/* Group 8: Paper Pattern Switcher */}
             <div className="flex items-center gap-1 bg-[#F5EFE3] p-1 rounded-xl border border-theme-border/70">
               <Tooltip label="Ruled Pattern" description="Classic lined notebook paper">
                 <button
