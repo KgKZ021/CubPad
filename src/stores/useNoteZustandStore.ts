@@ -9,6 +9,30 @@ import {
   StickyNoteItem,
   MascotStickerItem,
 } from '../types/note';
+import { saveNoteToDisk, loadAllNotesFromDisk, deleteNoteFromDisk } from '../services/tauriStorage';
+
+// Debounce map for note saving
+const saveDebounceMap = new Map<string, NodeJS.Timeout>();
+
+function triggerDebouncedSave(note: Note) {
+  useNoteZustandStore.setState({ saveStatus: 'saving' });
+
+  const existing = saveDebounceMap.get(note.id);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  const timer = setTimeout(async () => {
+    await saveNoteToDisk(note);
+    useNoteZustandStore.setState({
+      saveStatus: 'saved',
+      lastSavedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+    saveDebounceMap.delete(note.id);
+  }, 400);
+
+  saveDebounceMap.set(note.id, timer);
+}
 
 const INITIAL_DEMO_NOTES: Note[] = [
   {
@@ -47,6 +71,7 @@ const INITIAL_DEMO_NOTES: Note[] = [
     stickyNotes: [
       {
         id: 'sticky_demo_1',
+        title: 'PRO TIP',
         x: 520,
         y: 60,
         color: '#FFF3B0',
@@ -55,6 +80,7 @@ const INITIAL_DEMO_NOTES: Note[] = [
       },
       {
         id: 'sticky_demo_2',
+        title: 'STICKY MEMO',
         x: 520,
         y: 280,
         color: '#D4EDDA',
@@ -141,6 +167,7 @@ const INITIAL_DEMO_NOTES: Note[] = [
     stickyNotes: [
       {
         id: 'sticky_demo_3',
+        title: 'REMINDER',
         x: 480,
         y: 80,
         color: '#E8D7FF',
@@ -193,6 +220,11 @@ interface NoteState {
   isSidebarOpen: boolean;
   isStickerDrawerOpen: boolean;
 
+  // Save Status
+  saveStatus: 'saved' | 'saving' | 'error';
+  lastSavedAt: string | null;
+  forceSaveNow: () => Promise<void>;
+
   // Drawing Tools Session State
   activeDrawingTool: DrawingTool;
   drawingColor: string;
@@ -200,6 +232,7 @@ interface NoteState {
   drawingIsDashed: boolean;
 
   // Actions
+  hydrateFromDisk: () => Promise<void>;
   addNote: (category?: string, title?: string) => string;
   selectNote: (id: string) => void;
   updateNoteContent: (id: string, contentHtml: string) => void;
@@ -251,11 +284,41 @@ export const useNoteZustandStore = create<NoteState>()(
       isSidebarOpen: false,
       isStickerDrawerOpen: false,
 
+      // Save Status
+      saveStatus: 'saved',
+      lastSavedAt: 'Saved',
+
+      forceSaveNow: async () => {
+        const active = get().getActiveNote();
+        if (active) {
+          set({ saveStatus: 'saving' });
+          await saveNoteToDisk(active);
+          set({
+            saveStatus: 'saved',
+            lastSavedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          });
+        }
+      },
+
       // Default drawing tool configuration
       activeDrawingTool: 'none',
       drawingColor: '#4A3B32', // Warm Brown
       drawingStrokeWidth: 2,
       drawingIsDashed: false,
+
+      hydrateFromDisk: async () => {
+        const diskNotes = await loadAllNotesFromDisk();
+        if (diskNotes && diskNotes.length > 0) {
+          set((state) => ({
+            notes: diskNotes,
+            activeNoteId: diskNotes.some((n) => n.id === state.activeNoteId)
+              ? state.activeNoteId
+              : diskNotes[0].id,
+            saveStatus: 'saved',
+            lastSavedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }));
+        }
+      },
 
       addNote: (category = 'General', title = 'New Note') => {
         const newId = `note_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -284,8 +347,10 @@ export const useNoteZustandStore = create<NoteState>()(
           notes: [newNote, ...state.notes],
           activeNoteId: newId,
           isSidebarOpen: false,
+          saveStatus: 'saving',
         }));
 
+        triggerDebouncedSave(newNote);
         return newId;
       },
 
@@ -294,76 +359,121 @@ export const useNoteZustandStore = create<NoteState>()(
       },
 
       updateNoteContent: (id: string, contentHtml: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) =>
-            note.id === id
-              ? {
-                  ...note,
-                  contentHtml,
-                  updatedAt: new Date().toISOString(),
-                }
-              : note
-          ),
-        }));
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id === id) {
+              updatedNote = {
+                ...note,
+                contentHtml,
+                updatedAt: new Date().toISOString(),
+              };
+              return updatedNote;
+            }
+            return note;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateNoteTitle: (id: string, title: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) =>
-            note.id === id
-              ? {
-                  ...note,
-                  title,
-                  updatedAt: new Date().toISOString(),
-                }
-              : note
-          ),
-        }));
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id === id) {
+              updatedNote = {
+                ...note,
+                title,
+                updatedAt: new Date().toISOString(),
+              };
+              return updatedNote;
+            }
+            return note;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateNoteCategory: (id: string, category: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) =>
-            note.id === id
-              ? {
-                  ...note,
-                  category,
-                  updatedAt: new Date().toISOString(),
-                }
-              : note
-          ),
-        }));
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id === id) {
+              updatedNote = {
+                ...note,
+                category,
+                updatedAt: new Date().toISOString(),
+              };
+              return updatedNote;
+            }
+            return note;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateNoteBackgroundStyle: (id: string, backgroundStyle: PaperStyle) => {
-        set((state) => ({
-          notes: state.notes.map((note) =>
-            note.id === id
-              ? {
-                  ...note,
-                  backgroundStyle,
-                  updatedAt: new Date().toISOString(),
-                }
-              : note
-          ),
-        }));
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id === id) {
+              updatedNote = {
+                ...note,
+                backgroundStyle,
+                updatedAt: new Date().toISOString(),
+              };
+              return updatedNote;
+            }
+            return note;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateNoteFontFamily: (id: string, fontFamily: FontFamilyChoice) => {
-        set((state) => ({
-          notes: state.notes.map((note) =>
-            note.id === id
-              ? {
-                  ...note,
-                  fontFamily,
-                  updatedAt: new Date().toISOString(),
-                }
-              : note
-          ),
-        }));
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id === id) {
+              updatedNote = {
+                ...note,
+                fontFamily,
+                updatedAt: new Date().toISOString(),
+              };
+              return updatedNote;
+            }
+            return note;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       deleteNote: (id: string) => {
+        const targetNote = get().notes.find((n) => n.id === id);
+        if (targetNote) {
+          deleteNoteFromDisk(id, targetNote.title);
+        }
+
         set((state) => {
           const newNotes = state.notes.filter((note) => note.id !== id);
           let newActiveId = state.activeNoteId;
@@ -426,63 +536,98 @@ export const useNoteZustandStore = create<NoteState>()(
       },
 
       addVectorShape: (noteId: string, shape: VectorShape) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentShapes = note.vectorShapes || note.content?.vectors || [];
-            return {
+            updatedNote = {
               ...note,
               vectorShapes: [...currentShapes, shape],
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       undoLastVectorShape: (noteId: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentShapes = note.vectorShapes || note.content?.vectors || [];
             if (currentShapes.length === 0) return note;
-            return {
+            updatedNote = {
               ...note,
               vectorShapes: currentShapes.slice(0, -1),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       deleteVectorShape: (noteId: string, shapeId: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentShapes = note.vectorShapes || note.content?.vectors || [];
-            return {
+            updatedNote = {
               ...note,
               vectorShapes: currentShapes.filter((s) => s.id !== shapeId),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       clearAllVectorShapes: (noteId: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
-            return {
+            updatedNote = {
               ...note,
               vectorShapes: [],
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       // Sticky Notes Actions
-      addStickyNote: (noteId: string, x = 460, y = 100, color = '#FFF3B0', text = 'New Note...', title = 'Memo') => {
+      addStickyNote: (
+        noteId: string,
+        x = 460,
+        y = 100,
+        color = '#FFF3B0',
+        text = 'New Note...',
+        title = 'Memo'
+      ) => {
         const newStickyId = `sticky_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const newSticky: StickyNoteItem = {
           id: newStickyId,
@@ -494,105 +639,154 @@ export const useNoteZustandStore = create<NoteState>()(
           isMinimized: false,
         };
 
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: [...currentStickies, newSticky],
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
 
         return newStickyId;
       },
 
       updateStickyNoteTitle: (noteId: string, id: string, title: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, title } : s)),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateStickyNotePosition: (noteId: string, id: string, x: number, y: number) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, x, y } : s)),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateStickyNoteText: (noteId: string, id: string, text: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, text } : s)),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateStickyNoteColor: (noteId: string, id: string, color: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.map((s) => (s.id === id ? { ...s, color } : s)),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       toggleStickyNoteMinimized: (noteId: string, id: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.map((s) =>
                 s.id === id ? { ...s, isMinimized: !s.isMinimized } : s
               ),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       deleteStickyNote: (noteId: string, id: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickies = note.stickyNotes || note.content?.stickyNotes || [];
-            return {
+            updatedNote = {
               ...note,
               stickyNotes: currentStickies.filter((s) => s.id !== id),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       // Mascot Stickers Actions
@@ -614,68 +808,101 @@ export const useNoteZustandStore = create<NoteState>()(
           rotation,
         };
 
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickers = note.mascotStickers || note.content?.stickers || [];
-            return {
+            updatedNote = {
               ...note,
               mascotStickers: [...currentStickers, newSticker],
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
 
         return newStickerId;
       },
 
       updateMascotStickerPosition: (noteId: string, id: string, x: number, y: number) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickers = note.mascotStickers || note.content?.stickers || [];
-            return {
+            updatedNote = {
               ...note,
               mascotStickers: currentStickers.map((stk) => (stk.id === id ? { ...stk, x, y } : stk)),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       updateMascotStickerScale: (noteId: string, id: string, scale: number) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickers = note.mascotStickers || note.content?.stickers || [];
-            return {
+            updatedNote = {
               ...note,
               mascotStickers: currentStickers.map((stk) =>
                 stk.id === id ? { ...stk, scale: Math.max(0.6, Math.min(2.0, scale)) } : stk
               ),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
 
       deleteMascotSticker: (noteId: string, id: string) => {
-        set((state) => ({
-          notes: state.notes.map((note) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
             if (note.id !== noteId) return note;
             const currentStickers = note.mascotStickers || note.content?.stickers || [];
-            return {
+            updatedNote = {
               ...note,
               mascotStickers: currentStickers.filter((stk) => stk.id !== id),
               updatedAt: new Date().toISOString(),
             };
-          }),
-        }));
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
       },
     }),
     {
-      name: 'cub-pad-notes-storage-v5',
+      name: 'cub-pad-notes-storage-v6',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        notes: state.notes,
+        activeNoteId: state.activeNoteId,
+        fontMode: state.fontMode,
+      }),
     }
   )
 );

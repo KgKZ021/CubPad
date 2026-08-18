@@ -26,6 +26,7 @@ export const CubEditor: React.FC = () => {
 
   const activeNote = getActiveNote();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const activeNoteIdRef = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -60,16 +61,18 @@ export const CubEditor: React.FC = () => {
     },
   });
 
-  // Sync editor content when the active note changes
+  // Sync editor content whenever active note changes or is hydrated from storage
   useEffect(() => {
     if (!editor || !activeNote) return;
 
-    // Only replace content if the note switched
-    const currentHtml = editor.getHTML();
-    if (activeNote.contentHtml !== currentHtml) {
-      editor.commands.setContent(activeNote.contentHtml, { emitUpdate: false });
+    const noteContent = activeNote.contentHtml || '';
+    if (activeNoteIdRef.current !== activeNote.id) {
+      activeNoteIdRef.current = activeNote.id;
+      editor.commands.setContent(noteContent, { emitUpdate: false });
+    } else if (!editor.isFocused && editor.getHTML() !== noteContent) {
+      editor.commands.setContent(noteContent, { emitUpdate: false });
     }
-  }, [activeNote?.id, editor]);
+  }, [activeNote?.id, activeNote?.contentHtml, editor]);
 
   if (!activeNote) return null;
 
@@ -86,7 +89,6 @@ export const CubEditor: React.FC = () => {
   const mascotStickers = activeNote.mascotStickers || activeNote.content?.stickers || [];
 
   const handleContainerDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only trigger if double clicking on empty canvas areas or container background
     const target = e.target as HTMLElement;
     if (
       target === containerRef.current ||
@@ -97,7 +99,7 @@ export const CubEditor: React.FC = () => {
         const rect = containerRef.current.getBoundingClientRect();
         const x = Math.max(20, e.clientX - rect.left - 60);
         const y = Math.max(20, e.clientY - rect.top - 20);
-        addStickyNote(activeNote.id, x, y, '#FFF3B0', '🐾 Memo:\n');
+        addStickyNote(activeNote.id, x, y, '#FFF3B0', '🐾 Memo:\n', 'Memo');
       }
     }
   };

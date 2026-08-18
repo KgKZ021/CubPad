@@ -28,6 +28,8 @@ import {
   RotateCcw,
   HelpCircle,
   StickyNote as StickyIcon,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { HighlighterMenu } from './HighlighterMenu';
 import { TableMenu } from './TableMenu';
@@ -66,15 +68,26 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     addStickyNote,
     isStickerDrawerOpen,
     toggleStickerDrawer,
+    saveStatus,
+    lastSavedAt,
+    forceSaveNow,
   } = useNoteZustandStore();
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const activeNote = getActiveNote();
 
-  // Global shortcut to open help/shortcuts modal (? or Cmd+/)
+  // Global shortcut to open help/shortcuts modal (? or Cmd+/) and Cmd+S save
   useEffect(() => {
     const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      // Cmd+S or Ctrl+S save shortcut
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        forceSaveNow();
+        return;
+      }
+
+      // Check if user pressed ? or Cmd+/
       if ((e.key === '?' || ((e.metaKey || e.ctrlKey) && e.key === '/')) && !isShortcutsOpen) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
@@ -86,7 +99,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
 
     window.addEventListener('keydown', handleGlobalShortcuts);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
-  }, [isShortcutsOpen]);
+  }, [isShortcutsOpen, forceSaveNow]);
 
   if (!editor || !activeNote) return null;
 
@@ -127,10 +140,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
 
   const handleAddSticky = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Offset each newly added sticky note so they don't directly stack
     const newX = 480 + (stickies.length % 3) * 20;
     const newY = 70 + (stickies.length % 5) * 40;
-    addStickyNote(activeNote.id, newX, newY, '#FFF3B0', '🐾 New Reminder:\n');
+    addStickyNote(activeNote.id, newX, newY, '#FFF3B0', '🐾 New Reminder:\n', 'Memo');
   };
 
   return (
@@ -485,8 +497,43 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
             </div>
           </div>
 
-          {/* Right: Typography Font Switch & Help Guide Button */}
+          {/* Right: Save Status, Typography Font Switch & Help Guide Button */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Auto-Save & Manual Save Status Badge */}
+            <Tooltip
+              label={saveStatus === 'saving' ? 'Saving changes...' : 'Saved to Disk & Browser'}
+              shortcut={`${cmd}S`}
+              description={
+                saveStatus === 'saving'
+                  ? 'Writing notes to local storage & disk...'
+                  : `All changes saved (${lastSavedAt || 'Synced'}). Click to force save now.`
+              }
+            >
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={forceSaveNow}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs border ${
+                  saveStatus === 'saving'
+                    ? 'bg-amber-50 text-amber-900 border-amber-200 animate-pulse'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100/70'
+                }`}
+              >
+                {saveStatus === 'saving' ? (
+                  <Loader2 size={13} className="animate-spin text-amber-600" />
+                ) : (
+                  <CheckCircle2 size={13} className="text-emerald-600" />
+                )}
+                <span>{saveStatus === 'saving' ? 'Saving...' : 'Saved'}</span>
+                {lastSavedAt && saveStatus !== 'saving' && (
+                  <span className="hidden md:inline text-[10px] text-emerald-700/70 font-normal">
+                    {lastSavedAt}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
+
+            {/* Typography Font Mode Toggle */}
             <Tooltip
               label="Toggle Font Style"
               description="Switch between cozy Caveat handwriting & clean Nunito UI text"
