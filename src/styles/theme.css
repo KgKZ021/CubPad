@@ -19,6 +19,16 @@
   --selection-bg: #F7D7B5;
 }
 
+@font-face {
+  font-family: 'KG Miss Steward';
+  src: url('https://fonts.cdnfonts.com/s/14884/KGMissSteward.woff') format('woff'),
+       local('KG Miss Steward'),
+       local('KGMissSteward');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Typography Utility Classes */
 .font-ui {
   font-family: 'Nunito', 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,6 +41,11 @@
 .font-handwriting {
   font-family: 'Caveat', 'Patrick Hand', cursive, sans-serif;
   letter-spacing: 0.02em;
+}
+
+.font-steward {
+  font-family: 'KG Miss Steward', 'Schoolbell', 'Patrick Hand', 'Caveat', cursive, sans-serif;
+  letter-spacing: 0.015em;
 }
 
 .font-patrick {

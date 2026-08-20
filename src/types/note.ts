@@ -1,5 +1,5 @@
 export type PaperStyle = 'lined' | 'grid' | 'dot' | 'blank';
-export type FontFamilyChoice = 'Caveat' | 'Patrick Hand' | 'Nunito' | 'Fredoka';
+export type FontFamilyChoice = 'KG Miss Steward' | 'Caveat' | 'Patrick Hand' | 'Nunito' | 'Fredoka';
 export type PuppyTheme = 'golden_retriever' | 'corgi' | 'shiba';
 
 export interface StickyNoteItem {

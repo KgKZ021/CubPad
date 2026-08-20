@@ -193,31 +193,31 @@ export const Sidebar: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-theme-accent hover:bg-[#C26325] text-white font-display font-semibold text-sm rounded-xl shadow-cozy transition-all duration-150 active:scale-[0.98] cursor-pointer"
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>+ New Note</span>
+            <span>New Note</span>
           </button>
 
           {/* Search Input with Shortcut Badge */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9F9386] pointer-events-none" />
+          <div className="relative flex items-center">
+            <Search size={14} className="absolute left-3 text-[#9F9386] pointer-events-none flex-shrink-0" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder={`Search notes (${cmd}F)...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/90 focus:bg-white text-xs pl-8.5 pr-8 py-2 rounded-xl border border-theme-border/80 focus:outline-none focus:ring-2 focus:ring-theme-accent/30 placeholder:text-[#9F9386] transition-colors shadow-2xs"
+              className="w-full bg-white/90 focus:bg-white text-xs pl-9 pr-11 py-2 rounded-xl border border-theme-border/80 focus:outline-none focus:ring-2 focus:ring-theme-accent/30 placeholder:text-[#9F9386] transition-colors shadow-2xs leading-normal"
             />
             {searchTerm ? (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-[#9F9386] hover:text-theme-text transition-colors cursor-pointer"
+                className="absolute right-2.5 p-1 text-[#9F9386] hover:text-theme-text transition-colors cursor-pointer flex items-center justify-center"
                 title="Clear search"
               >
                 <X size={13} />
               </button>
             ) : (
-              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono text-[#9F9386] bg-black/5 border border-black/10 rounded pointer-events-none hidden sm:inline-block">
+              <kbd className="absolute right-2.5 px-1.5 py-0.5 text-[9px] font-mono text-[#9F9386] bg-black/5 border border-black/10 rounded pointer-events-none hidden sm:inline-block">
                 {cmd}F
               </kbd>
             )}

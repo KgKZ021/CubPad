@@ -21,6 +21,7 @@ export default {
         ui: ['Nunito', 'Fredoka', 'system-ui', 'sans-serif'],
         display: ['Fredoka', 'Nunito', 'sans-serif'],
         handwriting: ['Caveat', 'Patrick Hand', 'cursive'],
+        steward: ['"KG Miss Steward"', 'Schoolbell', '"Patrick Hand"', 'Caveat', 'cursive', 'sans-serif'],
         patrick: ['Patrick Hand', 'cursive'],
       },
       boxShadow: {

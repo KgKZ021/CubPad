@@ -146,7 +146,9 @@ export const CubEditor: React.FC = () => {
             {/* Rich Text Editor Content */}
             <div
               className={`relative z-10 transition-all duration-150 ${
-                fontMode === 'handwriting'
+                fontMode === 'steward'
+                  ? 'font-steward text-lg sm:text-xl leading-relaxed'
+                  : fontMode === 'handwriting'
                   ? 'font-handwriting text-xl sm:text-2xl leading-relaxed'
                   : 'font-ui text-sm sm:text-base leading-normal'
               }`}

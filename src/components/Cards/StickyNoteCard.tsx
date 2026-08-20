@@ -29,6 +29,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     updateStickyNoteColor,
     toggleStickyNoteMinimized,
     deleteStickyNote,
+    fontMode,
   } = useNoteZustandStore();
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -40,7 +41,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
   useEffect(() => {
     if (textareaRef.current && !sticky.isMinimized) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(64, textareaRef.current.scrollHeight)}px`;
+      textareaRef.current.style.height = `${Math.max(56, textareaRef.current.scrollHeight)}px`;
     }
   }, [sticky.text, sticky.isMinimized]);
 
@@ -51,7 +52,6 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
 
   // Drag handlers
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Only trigger drag if clicking the header or grip (not text inputs/buttons)
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('button')) {
       return;
@@ -90,8 +90,8 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
     // Boundary clamping relative to container
     if (containerRef.current) {
       const containerRect = containerRef.current.getBoundingClientRect();
-      const cardWidth = sticky.isMinimized ? 170 : 210;
-      const cardHeight = sticky.isMinimized ? 32 : 140;
+      const cardWidth = sticky.isMinimized ? 160 : 200;
+      const cardHeight = sticky.isMinimized ? 28 : 130;
 
       const maxX = Math.max(0, containerRect.width - cardWidth);
       const maxY = Math.max(0, containerRect.height - cardHeight);
@@ -125,19 +125,19 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
         color: colorConfig.text,
       }}
       className={`absolute top-0 left-0 z-30 rounded-2xl border shadow-sticky transition-shadow duration-150 select-none ${
-        sticky.isMinimized ? 'w-44 sm:w-52' : 'w-52 sm:w-60'
+        sticky.isMinimized ? 'w-40 sm:w-48' : 'w-48 sm:w-56'
       } ${isDragging ? 'shadow-sticky-hover scale-105 cursor-grabbing z-40' : 'cursor-default'}`}
     >
-      {/* Slimmer Header Bar with Editable Title */}
+      {/* Narrow Minimalist Header Menu Bar with Editable Title */}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="px-2 py-0.5 min-h-[24px] flex items-center justify-between border-b border-black/10 cursor-grab active:cursor-grabbing rounded-t-2xl bg-black/5 gap-1"
+        className="px-1.5 py-0.5 min-h-[22px] flex items-center justify-between border-b border-black/10 cursor-grab active:cursor-grabbing rounded-t-2xl bg-black/5 gap-0.5"
       >
         <div className="flex items-center gap-0.5 min-w-0 flex-1">
-          <GripVertical size={11} className="opacity-35 flex-shrink-0 cursor-grab active:cursor-grabbing" />
+          <GripVertical size={10} className="opacity-30 flex-shrink-0 cursor-grab active:cursor-grabbing" />
           
           {/* Editable Title Input */}
           <input
@@ -146,7 +146,7 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             onChange={(e) => updateStickyNoteTitle(noteId, sticky.id, e.target.value)}
             onPointerDown={(e) => e.stopPropagation()}
             placeholder="Memo"
-            className="w-full text-[10.5px] font-bold uppercase tracking-wider bg-transparent border-none focus:outline-none focus:bg-black/10 rounded px-1 min-w-0 truncate"
+            className="w-full text-[10px] font-bold uppercase tracking-wider bg-transparent border-none focus:outline-none focus:bg-black/10 rounded px-1 min-w-0 truncate leading-tight"
             style={{ color: colorConfig.text }}
             title="Click to rename note"
           />
@@ -159,15 +159,15 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
             <button
               type="button"
               onClick={() => setIsColorPickerOpen((prev) => !prev)}
-              className="p-0.5 rounded-md hover:bg-black/10 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
+              className="p-0.5 rounded hover:bg-black/10 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
               title="Change Color"
             >
-              <Palette size={11} />
+              <Palette size={10} />
             </button>
 
             {/* Color Palette Popover */}
             {isColorPickerOpen && (
-              <div className="absolute right-0 top-full mt-1 p-1.5 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-black/10 flex items-center gap-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-1 p-1 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-black/10 flex items-center gap-1 z-50 animate-in fade-in zoom-in-95 duration-100">
                 {STICKY_PALETTE.map((c) => (
                   <button
                     key={c.id}
@@ -191,34 +191,36 @@ export const StickyNoteCard: React.FC<StickyNoteCardProps> = ({
           <button
             type="button"
             onClick={() => toggleStickyNoteMinimized(noteId, sticky.id)}
-            className="p-0.5 rounded-md hover:bg-black/10 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
+            className="p-0.5 rounded hover:bg-black/10 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
             title={sticky.isMinimized ? 'Expand Note' : 'Minimize Note'}
           >
-            {sticky.isMinimized ? <Maximize2 size={11} /> : <Minus size={11} />}
+            {sticky.isMinimized ? <Maximize2 size={10} /> : <Minus size={10} />}
           </button>
 
           {/* Delete Sticky Note */}
           <button
             type="button"
             onClick={() => deleteStickyNote(noteId, sticky.id)}
-            className="p-0.5 rounded-md hover:bg-red-500/20 hover:text-red-700 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
+            className="p-0.5 rounded hover:bg-red-500/20 hover:text-red-700 transition-colors opacity-70 hover:opacity-100 cursor-pointer"
             title="Delete Note"
           >
-            <X size={11} />
+            <X size={10} />
           </button>
         </div>
       </div>
 
       {/* Note Body (Hidden when Minimized) */}
       {!sticky.isMinimized && (
-        <div className="p-2.5 pt-2">
+        <div className="p-2 pt-1.5">
           <textarea
             ref={textareaRef}
             value={sticky.text}
             onChange={(e) => updateStickyNoteText(noteId, sticky.id, e.target.value)}
             placeholder="Write a quick thought or reminder..."
             rows={2}
-            className="w-full bg-transparent border-none resize-none focus:outline-none font-handwriting text-base sm:text-lg leading-relaxed placeholder:opacity-40"
+            className={`w-full bg-transparent border-none resize-none focus:outline-none text-sm sm:text-base leading-relaxed placeholder:opacity-40 ${
+              fontMode === 'steward' ? 'font-steward' : 'font-handwriting'
+            }`}
             style={{ color: colorConfig.text }}
           />
         </div>

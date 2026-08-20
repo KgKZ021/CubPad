@@ -216,7 +216,7 @@ const INITIAL_DEMO_NOTES: Note[] = [
 interface NoteState {
   notes: Note[];
   activeNoteId: string | null;
-  fontMode: 'handwriting' | 'ui';
+  fontMode: 'steward' | 'handwriting' | 'ui';
   isSidebarOpen: boolean;
   isStickerDrawerOpen: boolean;
 
@@ -241,7 +241,7 @@ interface NoteState {
   updateNoteBackgroundStyle: (id: string, backgroundStyle: PaperStyle) => void;
   updateNoteFontFamily: (id: string, fontFamily: FontFamilyChoice) => void;
   deleteNote: (id: string) => void;
-  setFontMode: (mode: 'handwriting' | 'ui') => void;
+  setFontMode: (mode: 'steward' | 'handwriting' | 'ui') => void;
   toggleFontMode: () => void;
   setSidebarOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
@@ -280,13 +280,13 @@ export const useNoteZustandStore = create<NoteState>()(
     (set, get) => ({
       notes: INITIAL_DEMO_NOTES,
       activeNoteId: 'note_quickstart_01',
-      fontMode: 'handwriting',
+      fontMode: 'steward',
       isSidebarOpen: false,
       isStickerDrawerOpen: false,
 
       // Save Status
       saveStatus: 'saved',
-      lastSavedAt: 'Saved',
+      lastSavedAt: null,
 
       forceSaveNow: async () => {
         const active = get().getActiveNote();
@@ -487,13 +487,18 @@ export const useNoteZustandStore = create<NoteState>()(
         });
       },
 
-      setFontMode: (mode: 'handwriting' | 'ui') => {
+      setFontMode: (mode: 'steward' | 'handwriting' | 'ui') => {
         set({ fontMode: mode });
       },
 
       toggleFontMode: () => {
         set((state) => ({
-          fontMode: state.fontMode === 'handwriting' ? 'ui' : 'handwriting',
+          fontMode:
+            state.fontMode === 'steward'
+              ? 'handwriting'
+              : state.fontMode === 'handwriting'
+              ? 'ui'
+              : 'steward',
         }));
       },
 

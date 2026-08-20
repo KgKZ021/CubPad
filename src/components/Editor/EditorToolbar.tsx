@@ -525,9 +525,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                   <CheckCircle2 size={13} className="text-emerald-600" />
                 )}
                 <span>{saveStatus === 'saving' ? 'Saving...' : 'Saved'}</span>
-                {lastSavedAt && saveStatus !== 'saving' && (
+                {lastSavedAt && lastSavedAt !== 'Saved' && saveStatus !== 'saving' && (
                   <span className="hidden md:inline text-[10px] text-emerald-700/70 font-normal">
-                    {lastSavedAt}
+                    • {lastSavedAt}
                   </span>
                 )}
               </button>
@@ -536,21 +536,27 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
             {/* Typography Font Mode Toggle */}
             <Tooltip
               label="Toggle Font Style"
-              description="Switch between cozy Caveat handwriting & clean Nunito UI text"
+              description="Cycle between ✍️ KG Miss Steward, 🖋️ Caveat, and 🔤 Nunito UI text"
             >
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={toggleFontMode}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all duration-150 shadow-xs cursor-pointer ${
-                  fontMode === 'handwriting'
+                  fontMode === 'steward'
                     ? 'bg-[#FFF3B0] text-[#4F4310] border-[#E8DC88] hover:bg-[#FCEBA2]'
+                    : fontMode === 'handwriting'
+                    ? 'bg-amber-100/80 text-amber-950 border-amber-300 hover:bg-amber-200/80'
                     : 'bg-white text-theme-text border-theme-border hover:bg-theme-sidebar/60'
                 }`}
               >
                 <Type size={14} className="text-theme-accent" />
                 <span className="hidden sm:inline">
-                  {fontMode === 'handwriting' ? '✍️ Caveat' : '🔤 Nunito UI'}
+                  {fontMode === 'steward'
+                    ? '✍️ Miss Steward'
+                    : fontMode === 'handwriting'
+                    ? '🖋️ Caveat'
+                    : '🔤 Nunito UI'}
                 </span>
               </button>
             </Tooltip>
