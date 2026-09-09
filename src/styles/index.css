@@ -9,9 +9,20 @@ html, body, #root {
   margin: 0;
   padding: 0;
   user-select: none;
+  -webkit-user-select: none;
+}
+
+.tiptap,
+.tiptap *,
+[contenteditable="true"],
+[contenteditable="true"] *,
+.text-selectable {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 ::selection {
   background-color: var(--selection-bg);
   color: var(--text-main);
 }
+

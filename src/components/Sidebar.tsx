@@ -174,7 +174,7 @@ export const Sidebar: React.FC = () => {
 
             <div className="flex items-center gap-1.5">
               <span className="text-xs px-2 py-0.5 rounded-full bg-[#E8DFC8] text-[#5D5144] font-bold border border-[#D8CBAF]">
-                v0.1
+                v1.1
               </span>
               {/* Close Button on Mobile */}
               <button

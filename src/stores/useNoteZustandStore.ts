@@ -8,7 +8,10 @@ import {
   DrawingTool,
   StickyNoteItem,
   MascotStickerItem,
+  TextBlockItem,
+  TableBlockItem,
 } from '../types/note';
+import { Editor } from '@tiptap/react';
 import { saveNoteToDisk, loadAllNotesFromDisk, deleteNoteFromDisk } from '../services/tauriStorage';
 
 // Debounce map for note saving
@@ -259,6 +262,27 @@ interface NoteState {
   deleteVectorShape: (noteId: string, shapeId: string) => void;
   clearAllVectorShapes: (noteId: string) => void;
 
+  // Active focused editor & paper line snap
+  activeEditor: Editor | null;
+  setActiveEditor: (editor: Editor | null) => void;
+  activeBlockId: string | null;
+  setActiveBlockId: (id: string | null) => void;
+  snapToPaperLines: boolean;
+  setSnapToPaperLines: (snap: boolean) => void;
+  toggleSnapToPaperLines: () => void;
+
+  // Text Blocks Actions
+  addTextBlock: (noteId: string, x?: number, y?: number, initialHtml?: string, width?: number) => string;
+  updateTextBlockPosition: (noteId: string, id: string, x: number, y: number) => void;
+  updateTextBlockContent: (noteId: string, id: string, contentHtml: string) => void;
+  deleteTextBlock: (noteId: string, id: string) => void;
+
+  // Table Blocks Actions
+  addTableBlock: (noteId: string, x?: number, y?: number, contentHtml?: string, width?: number) => string;
+  updateTableBlockPosition: (noteId: string, id: string, x: number, y: number) => void;
+  updateTableBlockContent: (noteId: string, id: string, contentHtml: string) => void;
+  deleteTableBlock: (noteId: string, id: string) => void;
+
   // Sticky Notes Actions
   addStickyNote: (noteId: string, x?: number, y?: number, color?: string, text?: string, title?: string) => string;
   updateStickyNoteTitle: (noteId: string, id: string, title: string) => void;
@@ -283,6 +307,15 @@ export const useNoteZustandStore = create<NoteState>()(
       fontMode: 'steward',
       isSidebarOpen: false,
       isStickerDrawerOpen: false,
+
+      // Active focused editor & paper line snap
+      activeEditor: null,
+      setActiveEditor: (editor: Editor | null) => set({ activeEditor: editor }),
+      activeBlockId: null,
+      setActiveBlockId: (id: string | null) => set({ activeBlockId: id }),
+      snapToPaperLines: true,
+      setSnapToPaperLines: (snap: boolean) => set({ snapToPaperLines: snap }),
+      toggleSnapToPaperLines: () => set((state) => ({ snapToPaperLines: !state.snapToPaperLines })),
 
       // Save Status
       saveStatus: 'saved',
@@ -322,6 +355,7 @@ export const useNoteZustandStore = create<NoteState>()(
 
       addNote: (category = 'General', title = 'New Note') => {
         const newId = `note_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const initialHtml = `<h2>🐾 ${title || 'New Note'}</h2><p>Start typing your notes here...</p>`;
         const newNote: Note = {
           id: newId,
           title: title || 'New Note',
@@ -334,7 +368,16 @@ export const useNoteZustandStore = create<NoteState>()(
           vectorShapes: [],
           stickyNotes: [],
           mascotStickers: [],
-          contentHtml: `<h2>🐾 ${title || 'New Note'}</h2><p>Start typing your notes here...</p>`,
+          textBlocks: [
+            {
+              id: `tb_${Date.now()}_1`,
+              x: 40,
+              y: 32,
+              contentHtml: initialHtml,
+            },
+          ],
+          tableBlocks: [],
+          contentHtml: initialHtml,
           content: {
             textHtml: '',
             stickyNotes: [],
@@ -520,7 +563,22 @@ export const useNoteZustandStore = create<NoteState>()(
 
       getActiveNote: () => {
         const { notes, activeNoteId } = get();
-        return notes.find((n) => n.id === activeNoteId);
+        const note = notes.find((n) => n.id === activeNoteId);
+        if (note && (!note.textBlocks || note.textBlocks.length === 0) && note.contentHtml) {
+          return {
+            ...note,
+            textBlocks: [
+              {
+                id: `tb_${note.id}_main`,
+                x: 40,
+                y: 32,
+                contentHtml: note.contentHtml,
+              },
+            ],
+            tableBlocks: note.tableBlocks || [],
+          };
+        }
+        return note;
       },
 
       // Drawing Actions
@@ -612,6 +670,219 @@ export const useNoteZustandStore = create<NoteState>()(
             updatedNote = {
               ...note,
               vectorShapes: [],
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      // Text Blocks Actions
+      addTextBlock: (
+        noteId: string,
+        x = 40,
+        y = 32,
+        initialHtml = '<p></p>',
+        width?: number
+      ) => {
+        const newBlockId = `tb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newBlock: TextBlockItem = {
+          id: newBlockId,
+          x,
+          y,
+          width,
+          contentHtml: initialHtml,
+        };
+
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentBlocks =
+              note.textBlocks ||
+              (note.contentHtml ? [{ id: `tb_${note.id}_main`, x: 40, y: 32, contentHtml: note.contentHtml }] : []);
+            updatedNote = {
+              ...note,
+              textBlocks: [...currentBlocks, newBlock],
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving', activeBlockId: newBlockId };
+        });
+
+        return newBlockId;
+      },
+
+      updateTextBlockPosition: (noteId: string, id: string, x: number, y: number) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentBlocks =
+              note.textBlocks ||
+              (note.contentHtml ? [{ id: `tb_${note.id}_main`, x: 40, y: 32, contentHtml: note.contentHtml }] : []);
+            updatedNote = {
+              ...note,
+              textBlocks: currentBlocks.map((b) => (b.id === id ? { ...b, x, y } : b)),
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      updateTextBlockContent: (noteId: string, id: string, contentHtml: string) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentBlocks =
+              note.textBlocks ||
+              (note.contentHtml ? [{ id: `tb_${note.id}_main`, x: 40, y: 32, contentHtml: note.contentHtml }] : []);
+            const newBlocks = currentBlocks.map((b) => (b.id === id ? { ...b, contentHtml } : b));
+            const primaryHtml = newBlocks[0]?.contentHtml || contentHtml;
+            updatedNote = {
+              ...note,
+              contentHtml: primaryHtml,
+              textBlocks: newBlocks,
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      deleteTextBlock: (noteId: string, id: string) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentBlocks = note.textBlocks || [];
+            updatedNote = {
+              ...note,
+              textBlocks: currentBlocks.filter((b) => b.id !== id),
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      // Table Blocks Actions
+      addTableBlock: (
+        noteId: string,
+        x = 40,
+        y = 120,
+        contentHtml = '',
+        width?: number
+      ) => {
+        const newTableId = `table_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newTable: TableBlockItem = {
+          id: newTableId,
+          x,
+          y,
+          width,
+          contentHtml,
+        };
+
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentTables = note.tableBlocks || [];
+            updatedNote = {
+              ...note,
+              tableBlocks: [...currentTables, newTable],
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving', activeBlockId: newTableId };
+        });
+
+        return newTableId;
+      },
+
+      updateTableBlockPosition: (noteId: string, id: string, x: number, y: number) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentTables = note.tableBlocks || [];
+            updatedNote = {
+              ...note,
+              tableBlocks: currentTables.map((t) => (t.id === id ? { ...t, x, y } : t)),
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      updateTableBlockContent: (noteId: string, id: string, contentHtml: string) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentTables = note.tableBlocks || [];
+            updatedNote = {
+              ...note,
+              tableBlocks: currentTables.map((t) => (t.id === id ? { ...t, contentHtml } : t)),
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedNote;
+          });
+
+          if (updatedNote) {
+            triggerDebouncedSave(updatedNote);
+          }
+          return { notes: updatedNotes, saveStatus: 'saving' };
+        });
+      },
+
+      deleteTableBlock: (noteId: string, id: string) => {
+        set((state) => {
+          let updatedNote: Note | null = null;
+          const updatedNotes = state.notes.map((note) => {
+            if (note.id !== noteId) return note;
+            const currentTables = note.tableBlocks || [];
+            updatedNote = {
+              ...note,
+              tableBlocks: currentTables.filter((t) => t.id !== id),
               updatedAt: new Date().toISOString(),
             };
             return updatedNote;
@@ -907,6 +1178,7 @@ export const useNoteZustandStore = create<NoteState>()(
         notes: state.notes,
         activeNoteId: state.activeNoteId,
         fontMode: state.fontMode,
+        snapToPaperLines: state.snapToPaperLines,
       }),
     }
   )

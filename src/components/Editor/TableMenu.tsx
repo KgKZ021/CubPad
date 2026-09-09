@@ -10,15 +10,17 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Tooltip } from '../UI/Tooltip';
+import { useNoteZustandStore } from '../../stores/useNoteZustandStore';
 
 interface TableMenuProps {
   editor: Editor | null;
 }
 
-const MAX_GRID_ROWS = 6;
-const MAX_GRID_COLS = 6;
+const MAX_GRID_ROWS = 10;
+const MAX_GRID_COLS = 10;
 
 export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
+  const { getActiveNote, addTableBlock, activeBlockId } = useNoteZustandStore();
   const [isOpen, setIsOpen] = useState(false);
   const [hoverRows, setHoverRows] = useState(0);
   const [hoverCols, setHoverCols] = useState(0);
@@ -35,19 +37,39 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (!editor) return null;
+  const isInsideTable = editor ? editor.isActive('table') : false;
 
-  const isInsideTable = editor.isActive('table');
+  const createTableHtml = (rows: number, cols: number) => {
+    let html = '<table><thead><tr>';
+    for (let c = 0; c < cols; c++) {
+      html += `<th>Header ${c + 1}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    for (let r = 1; r < rows; r++) {
+      html += '<tr>';
+      for (let c = 0; c < cols; c++) {
+        html += '<td></td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
+  };
 
   const handleInsertGridTable = (rows: number, cols: number, e: React.MouseEvent) => {
     e.preventDefault();
-    if (!editor) return;
+    const activeNote = getActiveNote();
 
-    editor
-      .chain()
-      .focus()
-      .insertTable({ rows, cols, withHeaderRow: true })
-      .run();
+    if (editor && activeBlockId) {
+      editor
+        .chain()
+        .focus()
+        .insertTable({ rows, cols, withHeaderRow: true })
+        .run();
+    } else if (activeNote) {
+      addTableBlock(activeNote.id, 50, 120, createTableHtml(rows, cols));
+    }
+
     setIsOpen(false);
     setHoverRows(0);
     setHoverCols(0);
@@ -55,7 +77,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
 
   const handleInsertVocabPreset = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!editor) return;
+    const activeNote = getActiveNote();
 
     const vocabHtml = `
       <table>
@@ -86,7 +108,13 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
       </table>
       <p></p>
     `;
-    editor.chain().focus().insertContent(vocabHtml).run();
+
+    if (editor && activeBlockId) {
+      editor.chain().focus().insertContent(vocabHtml).run();
+    } else if (activeNote) {
+      addTableBlock(activeNote.id, 50, 120, vocabHtml);
+    }
+
     setIsOpen(false);
   };
 
@@ -118,18 +146,18 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
 
       {/* Table Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-cozy-lg border border-theme-border/90 p-3 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
-          {/* Custom Grid Interactive Matrix */}
+        <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-cozy-lg border border-theme-border/90 p-3 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
+          {/* Custom Grid Interactive Matrix (Up to 10x10) */}
           <div className="mb-3">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#8E8276] mb-1.5">
               <span>Custom Grid</span>
               <span className="text-theme-accent font-mono font-bold">
-                {hoverRows > 0 && hoverCols > 0 ? `${hoverRows} × ${hoverCols} Table` : 'Select Size'}
+                {hoverRows > 0 && hoverCols > 0 ? `${hoverRows} × ${hoverCols} Table` : 'Up to 10×10'}
               </span>
             </div>
 
             <div
-              className="grid grid-cols-6 gap-1 p-2 bg-[#FAF6EE] rounded-lg border border-theme-border/60 justify-items-center cursor-pointer"
+              className="grid grid-cols-10 gap-1 p-2 bg-[#FAF6EE] rounded-lg border border-theme-border/60 justify-items-center cursor-pointer"
               onMouseLeave={() => {
                 setHoverRows(0);
                 setHoverCols(0);
@@ -147,9 +175,9 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                       }}
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={(e) => handleInsertGridTable(rIndex + 1, cIndex + 1, e)}
-                      className={`w-6 h-6 rounded-md border transition-all duration-75 ${
+                      className={`w-5 h-5 rounded-[4px] border transition-all duration-75 ${
                         isHighlighted
-                          ? 'bg-amber-300 border-amber-500 scale-105 shadow-2xs'
+                          ? 'bg-amber-400 border-amber-600 scale-105 shadow-2xs'
                           : 'bg-white border-[#D8CBAF] hover:border-amber-400'
                       }`}
                       title={`${rIndex + 1} × ${cIndex + 1}`}
@@ -199,7 +227,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().addRowBefore().run();
+                    editor?.chain().focus().addRowBefore().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-theme-sidebar text-[#4A4036] text-[11px] cursor-pointer"
@@ -211,7 +239,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().addRowAfter().run();
+                    editor?.chain().focus().addRowAfter().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-theme-sidebar text-[#4A4036] text-[11px] cursor-pointer"
@@ -223,7 +251,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().addColumnBefore().run();
+                    editor?.chain().focus().addColumnBefore().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-theme-sidebar text-[#4A4036] text-[11px] cursor-pointer"
@@ -235,7 +263,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().addColumnAfter().run();
+                    editor?.chain().focus().addColumnAfter().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-theme-sidebar text-[#4A4036] text-[11px] cursor-pointer"
@@ -247,7 +275,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().deleteRow().run();
+                    editor?.chain().focus().deleteRow().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-red-50 text-red-700 text-[11px] cursor-pointer"
@@ -259,7 +287,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().deleteColumn().run();
+                    editor?.chain().focus().deleteColumn().run();
                     setIsOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1.5 rounded-md hover:bg-red-50 text-red-700 text-[11px] cursor-pointer"
@@ -274,7 +302,7 @@ export const TableMenu: React.FC<TableMenuProps> = ({ editor }) => {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    editor.chain().focus().deleteTable().run();
+                    editor?.chain().focus().deleteTable().run();
                     setIsOpen(false);
                   }}
                   className="w-full flex items-center justify-center gap-1.5 p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition-colors cursor-pointer"

@@ -53,6 +53,22 @@ export interface NoteContent {
   stickers?: MascotStickerItem[];
 }
 
+export interface TextBlockItem {
+  id: string;
+  x: number;
+  y: number;
+  width?: number;
+  contentHtml: string;
+}
+
+export interface TableBlockItem {
+  id: string;
+  x: number;
+  y: number;
+  width?: number;
+  contentHtml: string;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -66,5 +82,8 @@ export interface Note {
   vectorShapes?: VectorShape[]; // Direct array of vector lines/arrows
   stickyNotes?: StickyNoteItem[]; // Direct array of floating sticky notes
   mascotStickers?: MascotStickerItem[]; // Direct array of floating mascot stickers
+  textBlocks?: TextBlockItem[]; // Freeform movable text blocks on canvas
+  tableBlocks?: TableBlockItem[]; // Freestanding movable table blocks on canvas
   content?: NoteContent; // Rich forward-compatible container
 }
+

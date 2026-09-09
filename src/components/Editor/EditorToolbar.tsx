@@ -30,6 +30,7 @@ import {
   StickyNote as StickyIcon,
   CheckCircle2,
   Loader2,
+  Magnet,
 } from 'lucide-react';
 import { HighlighterMenu } from './HighlighterMenu';
 import { TableMenu } from './TableMenu';
@@ -39,7 +40,7 @@ import { useNoteZustandStore } from '../../stores/useNoteZustandStore';
 import { PaperStyle, DrawingTool } from '../../types/note';
 
 interface EditorToolbarProps {
-  editor: Editor | null;
+  editor?: Editor | null;
 }
 
 const PALETTE_COLORS = [
@@ -71,8 +72,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     saveStatus,
     lastSavedAt,
     forceSaveNow,
+    activeEditor,
+    snapToPaperLines,
+    toggleSnapToPaperLines,
   } = useNoteZustandStore();
 
+  const currentEditor = editor || activeEditor;
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const activeNote = getActiveNote();
@@ -101,7 +106,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
   }, [isShortcutsOpen, forceSaveNow]);
 
-  if (!editor || !activeNote) return null;
+  if (!activeNote) return null;
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   const cmd = isMac ? '⌘' : 'Ctrl';
@@ -109,7 +114,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
   const shift = isMac ? '⇧' : 'Shift';
 
   const currentPaperStyle: PaperStyle = activeNote.backgroundStyle || 'lined';
-  const isInsideTable = editor.isActive('table');
+  const isInsideTable = currentEditor ? currentEditor.isActive('table') : false;
   const shapes = activeNote.vectorShapes || activeNote.content?.vectors || [];
   const stickies = activeNote.stickyNotes || activeNote.content?.stickyNotes || [];
   const stickers = activeNote.mascotStickers || activeNote.content?.stickers || [];
@@ -157,8 +162,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().undo().run()}
-                  disabled={!editor.can().undo()}
+                  onClick={() => currentEditor?.chain().focus().undo().run()}
+                  disabled={!currentEditor || !currentEditor.can().undo()}
                   className="p-1.5 rounded-lg text-[#5D5144] hover:bg-theme-sidebar/70 disabled:opacity-35 disabled:hover:bg-transparent transition-colors cursor-pointer"
                   aria-label="Undo"
                 >
@@ -170,8 +175,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().redo().run()}
-                  disabled={!editor.can().redo()}
+                  onClick={() => currentEditor?.chain().focus().redo().run()}
+                  disabled={!currentEditor || !currentEditor.can().redo()}
                   className="p-1.5 rounded-lg text-[#5D5144] hover:bg-theme-sidebar/70 disabled:opacity-35 disabled:hover:bg-transparent transition-colors cursor-pointer"
                   aria-label="Redo"
                 >
@@ -186,9 +191,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                  onClick={() => currentEditor?.chain().focus().toggleHeading({ level: 1 }).run()}
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    editor.isActive('heading', { level: 1 })
+                    currentEditor && currentEditor.isActive('heading', { level: 1 })
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -202,9 +207,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  onClick={() => currentEditor?.chain().focus().toggleHeading({ level: 2 }).run()}
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    editor.isActive('heading', { level: 2 })
+                    currentEditor && currentEditor.isActive('heading', { level: 2 })
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -218,9 +223,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                  onClick={() => currentEditor?.chain().focus().toggleHeading({ level: 3 }).run()}
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    editor.isActive('heading', { level: 3 })
+                    currentEditor && currentEditor.isActive('heading', { level: 3 })
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -237,9 +242,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleBold().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleBold().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('bold')
+                    currentEditor && currentEditor.isActive('bold')
                       ? 'bg-theme-accent text-white shadow-2xs font-bold'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -253,9 +258,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleItalic().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleItalic().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('italic')
+                    currentEditor && currentEditor.isActive('italic')
                       ? 'bg-theme-accent text-white shadow-2xs font-bold'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -269,9 +274,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleStrike().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleStrike().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('strike')
+                    currentEditor && currentEditor.isActive('strike')
                       ? 'bg-theme-accent text-white shadow-2xs font-bold'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -288,9 +293,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleBulletList().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleBulletList().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('bulletList')
+                    currentEditor && currentEditor.isActive('bulletList')
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -304,9 +309,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleOrderedList().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('orderedList')
+                    currentEditor && currentEditor.isActive('orderedList')
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -320,9 +325,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleBlockquote().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('blockquote')
+                    currentEditor && currentEditor.isActive('blockquote')
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -336,9 +341,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                  onClick={() => currentEditor?.chain().focus().toggleCodeBlock().run()}
                   className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    editor.isActive('codeBlock')
+                    currentEditor && currentEditor.isActive('codeBlock')
                       ? 'bg-theme-accent text-white shadow-2xs'
                       : 'text-[#5D5144] hover:bg-theme-sidebar/70'
                   }`}
@@ -351,8 +356,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
 
             {/* Group 5: Study Tools (Highlighter & Table) */}
             <div className="flex items-center gap-1.5 pr-1 border-r border-theme-border/70">
-              <HighlighterMenu editor={editor} />
-              <TableMenu editor={editor} />
+              <HighlighterMenu editor={currentEditor} />
+              <TableMenu editor={currentEditor} />
             </div>
 
             {/* Group 6: Vector Lines & Arrows Draw Mode Toggle */}
@@ -495,6 +500,31 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 </button>
               </Tooltip>
             </div>
+
+            {/* Group 9: Snap to Paper Lines Toggle */}
+            <Tooltip
+              label={snapToPaperLines ? 'Snap to Lines: ON' : 'Snap to Lines: OFF'}
+              description={
+                snapToPaperLines
+                  ? 'Text & tables lock onto ruled paper lines (32px baseline grid)'
+                  : 'Freeform placement without snapping to lines'
+              }
+            >
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={toggleSnapToPaperLines}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+                  snapToPaperLines
+                    ? 'bg-amber-100/90 text-amber-950 border-amber-300 shadow-2xs font-bold'
+                    : 'bg-white text-[#7E7267] border-theme-border hover:bg-theme-sidebar/60'
+                }`}
+                aria-label="Toggle Snap to Paper Lines"
+              >
+                <Magnet size={13} className={snapToPaperLines ? 'text-amber-700' : 'text-[#8E8276]'} />
+                <span className="hidden lg:inline">{snapToPaperLines ? 'Snap ON' : 'Snap OFF'}</span>
+              </button>
+            </Tooltip>
           </div>
 
           {/* Right: Save Status, Typography Font Switch & Help Guide Button */}
@@ -795,7 +825,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().addRowBefore().run()}
+                  onClick={() => currentEditor?.chain().focus().addRowBefore().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-amber-100/60 border border-theme-border/70 rounded-md text-[11px] text-[#4A4036] cursor-pointer"
                 >
                   <Rows size={12} className="text-theme-accent" />
@@ -807,7 +837,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().addRowAfter().run()}
+                  onClick={() => currentEditor?.chain().focus().addRowAfter().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-amber-100/60 border border-theme-border/70 rounded-md text-[11px] text-[#4A4036] cursor-pointer"
                 >
                   <Rows size={12} className="text-theme-accent" />
@@ -819,7 +849,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().addColumnBefore().run()}
+                  onClick={() => currentEditor?.chain().focus().addColumnBefore().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-amber-100/60 border border-theme-border/70 rounded-md text-[11px] text-[#4A4036] cursor-pointer"
                 >
                   <Columns size={12} className="text-theme-accent" />
@@ -831,7 +861,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().addColumnAfter().run()}
+                  onClick={() => currentEditor?.chain().focus().addColumnAfter().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-amber-100/60 border border-theme-border/70 rounded-md text-[11px] text-[#4A4036] cursor-pointer"
                 >
                   <Columns size={12} className="text-theme-accent" />
@@ -843,7 +873,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().deleteRow().run()}
+                  onClick={() => currentEditor?.chain().focus().deleteRow().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-red-50 border border-theme-border/70 rounded-md text-[11px] text-red-700 cursor-pointer"
                 >
                   <Trash2 size={12} className="text-red-500" />
@@ -855,7 +885,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().deleteColumn().run()}
+                  onClick={() => currentEditor?.chain().focus().deleteColumn().run()}
                   className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-red-50 border border-theme-border/70 rounded-md text-[11px] text-red-700 cursor-pointer"
                 >
                   <Trash2 size={12} className="text-red-500" />
@@ -867,7 +897,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().deleteTable().run()}
+                  onClick={() => currentEditor?.chain().focus().deleteTable().run()}
                   className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px] font-bold cursor-pointer shadow-xs ml-1"
                 >
                   <Trash2 size={12} />
